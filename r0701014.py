@@ -60,8 +60,17 @@ def alias_draw(j, q):
         return j[kk]
 
 
-# TODO: add local search operators and diversity promotion schemes, maybe add elitism to the elimination scheme to not
-#  change the best individual.
+# TODO: Add local search operators before elimination
+# TODO: Add elitism
+# TODO: Diversity promotion schemes
+# TODO: ANN + Perm4 for initialization
+# TODO: OX and SCX recombination
+# TODO: Try starting tour always from 0 to make distance more easily computable
+# TODO: multiprocessing
+# TODO: Dynamic mutation rate
+# TODO: Test all combinations of mutation and recombination to find best solution
+# TODO: Decaying rank selection based on fitness
+# TODO: Convergence criterion
 class r0701014:
 
     def __init__(self):
@@ -71,7 +80,7 @@ class r0701014:
         self.generation = 0
 
         # EA parameters
-        self.population_size = 1000
+        self.population_size = 100
         self.offspring_size = int(0.5 * self.population_size)
         self.k = 3
         self.alpha = 0.10
@@ -79,7 +88,7 @@ class r0701014:
         self.selection_pressure_decay = 0
 
         # EA functions
-        self.selection_function = self.selection_rank_geometric_decay
+        self.selection_function = self.selection_roulette_wheel
         self.recombination_function = self.pmx
         self.mutation_function = self.reverse_sequence_mutation
         self.elimination_function = self.lambda_and_mu_elimination
@@ -94,7 +103,6 @@ class r0701014:
         if self.selection_function == self.selection_rank_geometric_decay:
             self.selection_pressure = 0.999
 
-    # TODO: elitism fix
     # The evolutionary algorithm's main loop
     def optimize(self, filename):
         # Read distance matrix from file.
@@ -137,7 +145,6 @@ class r0701014:
         Each individual is a numpy array as well and contains a random permutation of the numbers up to the tour_size.
         This permutation represents the order in which the individual visits the cities.
         """
-        # TODO: local search in the initialization phase, maybe the heuristic method as well
         population = np.empty([self.population_size, self.tour_size], dtype=np.int32)
         for i in range(self.population_size):
             individual = np.arange(self.tour_size)
@@ -235,17 +242,17 @@ class r0701014:
         parent2 = individuals[1]
         child1 = parent1.copy()
         child2 = parent2.copy()
-        size = min(len(child1), len(child2))
-        p1, p2 = [0] * size, [0] * size
+        p1 = np.zeros(self.tour_size, dtype=np.int)
+        p2 = np.zeros(self.tour_size, dtype=np.int)
 
         # Initialize the position of each indices in the individuals
-        for i in range(size):
+        for i in range(self.tour_size):
             p1[child1[i]] = i
             p2[child2[i]] = i
         # Choose crossover points
         # print('size ' + str(size))
-        cxpoint1 = random.randint(0, size)
-        cxpoint2 = random.randint(0, size - 1)
+        cxpoint1 = random.randint(0, self.tour_size)
+        cxpoint2 = random.randint(0, self.tour_size - 1)
         if cxpoint2 >= cxpoint1:
             cxpoint2 += 1
         else:  # Swap the two cx points
@@ -381,11 +388,7 @@ class r0701014:
         """
         if (population[0] != self.best_solution).any() and self.best_solution is not None:
             if self.length_individual(population[0]) > self.best_objective:
-                print(population[:-1])
-                print(self.best_solution)
-                print()
                 population = np.concatenate(([self.best_solution], population[:-1]))
-                print(population)
 
         else:
             return population
@@ -472,7 +475,6 @@ class r0701014:
         """
         :return: Returns True if the algorithm has converged, False if not.
         """
-        # TODO: Create better convergence criterion, maybe same mean for set number of iterations?
         # All solutions are the same
         # if self.mean_objective == self.best_objective:
         #     return True
