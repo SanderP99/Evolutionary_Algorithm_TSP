@@ -71,8 +71,8 @@ class r0701014:
         self.generation = 0
 
         # EA parameters
-        self.population_size = 50
-        self.offspring_size = 50
+        self.population_size = 1000
+        self.offspring_size = int(0.5 * self.population_size)
         self.k = 3
         self.alpha = 0.10
         self.selection_pressure = 0.01
@@ -94,6 +94,7 @@ class r0701014:
         if self.selection_function == self.selection_rank_geometric_decay:
             self.selection_pressure = 0.999
 
+    # TODO: elitism fix
     # The evolutionary algorithm's main loop
     def optimize(self, filename):
         # Read distance matrix from file.
@@ -141,6 +142,7 @@ class r0701014:
         for i in range(self.population_size):
             individual = np.arange(self.tour_size)
             np.random.shuffle(individual)
+            individual = self.local_search_2_opt(individual)
             population[i] = individual
         return population
 
@@ -203,7 +205,6 @@ class r0701014:
         :return: The selected individuals.
         """
         self.selection_pressure *= self.selection_pressure_decay
-        print(self.selection_pressure)
         a = np.log(self.selection_pressure) / (self.population_size - 1)
         probabilities = np.exp(a * (np.arange(1, self.population_size + 1) - 1))
         probabilities /= np.sum(probabilities)
@@ -370,6 +371,25 @@ class r0701014:
         perm = np.argsort(objective_values)
         return joined_population[perm[:self.population_size]], objective_values[perm[:self.population_size]]
 
+    def elitism(self, population: np.array) -> np.array:
+        """
+        This scheme is applied to the population after elimination to make sure that the fittest member of the previous
+        generation will also be part of the new generation (unless a better individual is already present in the current
+        generation.
+        :param population: The population to potentially add the fittest member of the previous generation to.
+        :return: The (altered) population.
+        """
+        if (population[0] != self.best_solution).any() and self.best_solution is not None:
+            if self.length_individual(population[0]) > self.best_objective:
+                print(population[:-1])
+                print(self.best_solution)
+                print()
+                population = np.concatenate(([self.best_solution], population[:-1]))
+                print(population)
+
+        else:
+            return population
+
     ########################
     #  OBJECTIVE FUNCTIONS #
     ########################
@@ -393,6 +413,57 @@ class r0701014:
         distance += self.distance_matrix[individual[-1]][individual[0]]
         return distance
 
+    #########################
+    #  DIVERSITY PROMOTION  #
+    #########################
+
+    def distances(self, individual: np.array, population: np.array) -> np.array:
+        pass
+
+    def distance(self, perm1, perm2: list):
+        distance = 0
+        for i in range(self.tour_size - 1):
+            element = perm1[i]
+            x = perm2.index(element)
+
+            y = 0 if x == self.tour_size - 1 else x + 1
+            if perm1[i + 1] != perm2[y]:
+                distance += 1
+
+        element = perm1[-1]
+        x = perm2.index(element)
+        if perm1[0] != perm2[x + 1]:
+            distance += 1
+
+        return distance
+
+    ############################
+    #  LOCAL SEARCH OPERATORS  #
+    ############################
+
+    def local_search_2_opt(self, individual: np.array) -> np.array:
+        improved_tour = np.array(individual, copy=True)
+        k = 0
+        while k <= 5:
+            for i in np.arange(self.tour_size - 1):
+                city1 = individual[i]
+                city2 = individual[i + 1]
+                distance_12 = self.distance_matrix[city1][city2]
+                for j in np.arange(i + 2, self.tour_size - 1):
+                    city3 = individual[j]
+                    city4 = individual[j + 1]
+                    distance_13 = self.distance_matrix[city1][city3]
+                    distance_34 = self.distance_matrix[city3][city4]
+                    distance_24 = self.distance_matrix[city2][city4]
+                    if distance_12 + distance_34 > distance_13 + distance_24:
+                        improved_tour[i + 1], improved_tour[j] = improved_tour[j], improved_tour[i + 1]
+                if self.length_individual(improved_tour) > self.length_individual(individual):
+                    improved_tour = individual
+                else:
+                    individual = improved_tour
+            k += 1
+        return improved_tour
+
     ######################
     #  HELPER FUNCTIONS  #
     ######################
@@ -407,13 +478,13 @@ class r0701014:
         #     return True
 
         # # No improvement
-        # if self.last_mean_objective == self.mean_objective and self.generation > 500:
-        #     return True
-        #
-        # # Not converged
-        # else:
-        #     return False
-        return False
+        if self.last_mean_objective == self.mean_objective and self.generation > 500:
+            return True
+
+        # Not converged
+        else:
+            return False
+        # return False
 
     def update_scores(self, individual: np.array, scores: np.array) -> None:
         """
@@ -427,6 +498,8 @@ class r0701014:
         self.best_objective = scores[0]
         self.best_solution = individual
         self.generation += 1
+        if self.generation % 1500 == 0:
+            self.alpha = max(0.01, self.alpha - 0.01)
 
     def set_selection_pressure(self) -> None:
         """
@@ -441,4 +514,4 @@ class r0701014:
 
 
 TSP = r0701014()
-TSP.optimize('tour194.csv')
+TSP.optimize('tour29.csv')
