@@ -80,12 +80,13 @@ class r0701014:
         self.generation = 0
 
         # EA parameters
-        self.population_size = 100
-        self.offspring_size = int(0.5 * self.population_size)
-        self.k = 3
-        self.alpha = 0.10
-        self.selection_pressure = 0.01
-        self.selection_pressure_decay = 0
+        self.population_size = 100                              # Population size
+        self.offspring_size = int(0.5 * self.population_size)   # Offspring size
+        self.k = 3                                              # k used in k-tournament
+        self.alpha = 0.10                                       # Mutation probability
+        self.sigma = 4                                          # Neighborhood distance (hamming)
+        self.selection_pressure = 0.01                          # Selection pressure for rank selection
+        self.selection_pressure_decay = 0                       # Decay of selection pressure for rank decay
 
         # EA functions
         self.selection_function = self.selection_roulette_wheel
@@ -109,7 +110,7 @@ class r0701014:
         file = open(filename)
         self.distance_matrix = np.loadtxt(file, delimiter=",")
         file.close()
-        self.tour_size = self.distance_matrix.shape[0]
+        self.tour_size = self.distance_matrix.shape[0] - 1
 
         self.set_selection_pressure()
 
@@ -121,6 +122,7 @@ class r0701014:
             joined_population = self.mutation(population, offspring)
             population, scores = self.elimination(joined_population)
             self.update_scores(population[0], scores)
+            # self.update_mutation_rate(scores[-1])
 
             # Call the reporter with:
             #  - the mean objective function value of the population
@@ -413,7 +415,8 @@ class r0701014:
         distance = 0
         for i in range(self.tour_size - 1):
             distance += self.distance_matrix[individual[i]][individual[i + 1]]
-        distance += self.distance_matrix[individual[-1]][individual[0]]
+        distance += self.distance_matrix[individual[-1]][self.tour_size]
+        distance += self.distance_matrix[self.tour_size][individual[0]]
         return distance
 
     #########################
@@ -439,6 +442,15 @@ class r0701014:
             distance += 1
 
         return distance
+
+    def distance_hamming(self, perm1: np.array, perm2: np.array) -> int:
+        """
+        Returns the hamming distance between two permutations (number of elements that are different).
+        :param perm1: The first permutation.
+        :param perm2: The second permutation.
+        :return: The hamming distance between two permutations (number of elements that are different).
+        """
+        return np.count_nonzero(perm1 != perm2)
 
     ############################
     #  LOCAL SEARCH OPERATORS  #
@@ -480,7 +492,7 @@ class r0701014:
         #     return True
 
         # # No improvement
-        if self.last_mean_objective == self.mean_objective and self.generation > 500:
+        if self.last_mean_objective == self.mean_objective and self.generation > 1000:
             return True
 
         # Not converged
@@ -498,7 +510,7 @@ class r0701014:
         self.last_mean_objective = self.mean_objective
         self.mean_objective = np.mean(scores)
         self.best_objective = scores[0]
-        self.best_solution = individual
+        self.best_solution = np.concatenate([[self.tour_size], individual])
         self.generation += 1
         if self.generation % 1500 == 0:
             self.alpha = max(0.01, self.alpha - 0.01)
@@ -513,6 +525,13 @@ class r0701014:
             self.selection_pressure_decay = self.selection_pressure
         else:
             self.selection_pressure = 0.01
+
+    def update_mutation_rate(self, worst_score: float) -> None:
+        """
+        Sets the new mutation rate (alpha) based on the best, worst and average objective value on this point
+        :param worst_score: The worst objective score of this generation.
+        """
+        self.alpha = 0.1 * (self.best_objective - worst_score) / (self.best_objective - self.mean_objective)
 
 
 TSP = r0701014()
