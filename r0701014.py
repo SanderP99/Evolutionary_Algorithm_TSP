@@ -61,7 +61,6 @@ def alias_draw(j, q):
 
 
 # TODO: Add local search operators before elimination
-# TODO: Add elitism
 # TODO: Diversity promotion schemes
 # TODO: ANN + Perm4 for initialization
 # TODO: OX and SCX recombination
@@ -86,6 +85,7 @@ class r0701014:
         self.alpha = 0.10
         self.selection_pressure = 0.01
         self.selection_pressure_decay = 0
+        self.use_random_initialization = False
 
         # EA functions
         self.selection_function = self.selection_roulette_wheel
@@ -120,7 +120,9 @@ class r0701014:
             offspring = self.recombination(population)
             joined_population = self.mutation(population, offspring)
             population, scores = self.elimination(joined_population)
+            population, scores = self.elitism(population, scores)
             self.update_scores(population[0], scores)
+            self.alpha = 0.2 * self.mean_objective / (self.best_objective + self.mean_objective)
 
             # Call the reporter with:
             #  - the mean objective function value of the population
@@ -145,13 +147,44 @@ class r0701014:
         Each individual is a numpy array as well and contains a random permutation of the numbers up to the tour_size.
         This permutation represents the order in which the individual visits the cities.
         """
-        population = np.empty([self.population_size, self.tour_size], dtype=np.int32)
-        for i in range(self.population_size):
-            individual = np.arange(self.tour_size)
-            np.random.shuffle(individual)
-            individual = self.local_search_2_opt(individual)
-            population[i] = individual
-        return population
+        if not self.use_random_initialization:
+            population = np.empty([self.population_size - self.tour_size, self.tour_size], dtype=np.int32)
+            population = np.concatenate([self.all_nearest_neighbors(), population])
+            for i in range(self.tour_size, self.population_size, 1):
+                individual = np.arange(self.tour_size)
+                np.random.shuffle(individual)
+                individual = self.local_search_2_opt(individual)
+                population[i] = individual
+            return population
+        else:
+            population = np.empty([self.population_size, self.tour_size], dtype=np.int32)
+            for i in range(self.population_size):
+                individual = np.arange(self.tour_size)
+                np.random.shuffle(individual)
+                individual = self.local_search_2_opt(individual)
+                population[i] = individual
+            return population
+
+    def all_nearest_neighbors(self) -> np.array:
+        nn = np.zeros([self.tour_size, self.tour_size], dtype=np.int)
+        for i in range(self.tour_size):
+            nn[i] = self.make_greedy_tour(i)
+        return nn
+
+    def make_greedy_tour(self, i: int) -> np.array:
+        individual = np.zeros(self.tour_size, dtype=np.int)
+        individual[0] = i
+        not_used = set(range(self.tour_size))
+        not_used.remove(i)
+        for j in range(1, self.tour_size, 1):
+            minimum_value = np.min(self.distance_matrix[i][list(not_used)])
+            nearest_city = np.where(self.distance_matrix[i] == minimum_value)
+            individual[j] = nearest_city[0]
+            not_used.remove(nearest_city[0][0])
+            i = nearest_city[0][0]
+        return individual
+
+
 
     ###############
     #  SELECTION  #
@@ -378,7 +411,7 @@ class r0701014:
         perm = np.argsort(objective_values)
         return joined_population[perm[:self.population_size]], objective_values[perm[:self.population_size]]
 
-    def elitism(self, population: np.array) -> np.array:
+    def elitism(self, population: np.array, scores: np.array) -> np.array:
         """
         This scheme is applied to the population after elimination to make sure that the fittest member of the previous
         generation will also be part of the new generation (unless a better individual is already present in the current
@@ -386,12 +419,17 @@ class r0701014:
         :param population: The population to potentially add the fittest member of the previous generation to.
         :return: The (altered) population.
         """
-        if (population[0] != self.best_solution).any() and self.best_solution is not None:
-            if self.length_individual(population[0]) > self.best_objective:
-                population = np.concatenate(([self.best_solution], population[:-1]))
-
+        if (population[0] == self.best_solution).all() or self.best_solution is None:
+            return population, scores
         else:
-            return population
+            if self.length_individual(population[0]) < self.best_objective:
+                return population, scores
+            else:
+                population[-1] = self.best_solution
+                scores[-1] = self.best_objective
+                population[0], population[-1] = population[-1], population[0]
+                scores[0], scores[-1] = scores[-1], scores[0]
+                return population, scores
 
     ########################
     #  OBJECTIVE FUNCTIONS #
@@ -517,3 +555,4 @@ class r0701014:
 
 TSP = r0701014()
 TSP.optimize('tour29.csv')
+
