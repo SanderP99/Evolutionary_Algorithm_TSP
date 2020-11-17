@@ -63,10 +63,8 @@ def alias_draw(j, q):
 # TODO: Add local search operators before elimination
 # TODO: Diversity promotion schemes
 # TODO: ANN + Perm4 for initialization
-# TODO: OX and SCX recombination
 # TODO: Try starting tour always from 0 to make distance more easily computable
 # TODO: multiprocessing
-# TODO: Dynamic mutation rate
 # TODO: Test all combinations of mutation and recombination to find best solution
 # TODO: Decaying rank selection based on fitness
 # TODO: Convergence criterion
@@ -89,7 +87,7 @@ class r0701014:
 
         # EA functions
         self.selection_function = self.selection_roulette_wheel
-        self.recombination_function = self.pmx
+        self.recombination_function = self.sequential_constructive_crossover
         self.mutation_function = self.reverse_sequence_mutation
         self.elimination_function = self.lambda_and_mu_elimination
 
@@ -122,7 +120,7 @@ class r0701014:
             population, scores = self.elimination(joined_population)
             population, scores = self.elitism(population, scores)
             self.update_scores(population[0], scores)
-            self.alpha = 0.2 * self.mean_objective / (self.best_objective + self.mean_objective)
+            self.alpha = 0.1 * (2 * self.mean_objective) / (self.best_objective + self.mean_objective)
 
             # Call the reporter with:
             #  - the mean objective function value of the population
@@ -166,12 +164,22 @@ class r0701014:
             return population
 
     def all_nearest_neighbors(self) -> np.array:
+        """
+        Creates an initial population using a greedy algorithm starting from every possible starting point.
+        :return: The population of size self.tour_size.
+        """
         nn = np.zeros([self.tour_size, self.tour_size], dtype=np.int)
         for i in range(self.tour_size):
             nn[i] = self.make_greedy_tour(i)
         return nn
 
     def make_greedy_tour(self, i: int) -> np.array:
+        """
+        The greedy algorithm to create a tour given a starting point i. The algorithm visits the closest city that has
+        not yet been visited.
+        :param i: The starting point.
+        :return: The tour created by the greedy algorithm.
+        """
         individual = np.zeros(self.tour_size, dtype=np.int)
         individual[0] = i
         not_used = set(range(self.tour_size))
@@ -183,8 +191,6 @@ class r0701014:
             not_used.remove(nearest_city[0][0])
             i = nearest_city[0][0]
         return individual
-
-
 
     ###############
     #  SELECTION  #
@@ -254,6 +260,7 @@ class r0701014:
     #  RECOMBINATION  #
     ###################
 
+    # TODO: fix the use of recombination function that only produces 1 offspring
     def recombination(self, population: np.array) -> np.array:
         """
         The method selects two parents for the recombination operator using the selection method specified in
@@ -304,6 +311,80 @@ class r0701014:
             p2[temp1], p2[temp2] = p2[temp2], p2[temp1]
 
         return child1, child2
+
+    def order_crossover(self, individuals: np.array) -> np.array:
+        """
+        Order crossover (OX) proposed by Davis.
+        https://www.hindawi.com/journals/cin/2017/7430125/
+        :param individuals: The two parents to recombine.
+        :return: The children created from the two parents.
+        """
+        parent1 = individuals[0]
+        parent2 = individuals[1]
+        child1 = np.zeros(self.tour_size)
+        child2 = np.zeros(self.tour_size)
+        cx1, cx2 = np.sort(np.random.randint(self.tour_size, size=2))
+        child1[cx1:cx2] = parent1[cx1:cx2]
+        child2[cx1:cx2] = parent2[cx1:cx2]
+        used_in_c1 = set(parent1[cx1:cx2])
+        used_in_c2 = set(parent2[cx1:cx2])
+
+        sequence_parent1 = []
+        sequence_parent2 = []
+        i = cx2
+        start = True
+        while i != cx2 or start:
+            start = False
+            if parent1[i] not in used_in_c2:
+                sequence_parent1.append(parent1[i])
+            if parent2[i] not in used_in_c1:
+                sequence_parent2.append(parent2[i])
+            i = (i + 1) % self.tour_size
+
+        while len(sequence_parent1) != 0:
+            child1[i] = sequence_parent2.pop(0)
+            child2[i] = sequence_parent1.pop(0)
+            i = (i + 1) % self.tour_size
+
+        return child1, child2
+
+    def sequential_constructive_crossover(self, individuals: np.array) -> np.array:
+        """
+        Sequential constructive crossover (SCX) by Ahmed
+        https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.371.7771&rep=rep1&type=pdf
+        :param individuals: The parents to use
+        :return: The child created
+        """
+        parent1, parent2 = individuals
+        child = np.zeros(self.tour_size)
+        child[0] = 0
+        nodes_used = set([0])
+
+        for i in range(1, self.tour_size, 1):
+            previous_node = int(child[i - 1])
+            node_parent1 = self.find_first_node(previous_node, parent1, nodes_used)
+            node_parent2 = self.find_first_node(previous_node, parent2, nodes_used)
+            cost_parent1 = self.distance_matrix[previous_node][node_parent1]
+            cost_parent2 = self.distance_matrix[previous_node][node_parent2]
+            if cost_parent1 < cost_parent2:
+                nodes_used.add(node_parent1)
+                child[i] = node_parent1
+            else:
+                nodes_used.add(node_parent2)
+                child[i] = node_parent2
+
+        return child, parent1
+
+    def find_first_node(self, previous_node: int, parent: np.array, nodes_used: set) -> int:
+        index_previous_node = np.where(parent == previous_node)[0][0]
+        for i in range(index_previous_node + 1, self.tour_size, 1):
+            if parent[i] not in nodes_used:
+                return parent[i]
+
+        for i in range(1, self.tour_size):
+            if i not in nodes_used:
+                return i
+
 
     ##############
     #  MUTATION  #
@@ -416,6 +497,7 @@ class r0701014:
         This scheme is applied to the population after elimination to make sure that the fittest member of the previous
         generation will also be part of the new generation (unless a better individual is already present in the current
         generation.
+        :param scores:
         :param population: The population to potentially add the fittest member of the previous generation to.
         :return: The (altered) population.
         """
@@ -461,7 +543,7 @@ class r0701014:
     def distances(self, individual: np.array, population: np.array) -> np.array:
         pass
 
-    def distance(self, perm1, perm2: list):
+    def distance(self, perm1: list, perm2: list) -> float:
         distance = 0
         for i in range(self.tour_size - 1):
             element = perm1[i]
@@ -538,8 +620,6 @@ class r0701014:
         self.best_objective = scores[0]
         self.best_solution = individual
         self.generation += 1
-        if self.generation % 1500 == 0:
-            self.alpha = max(0.01, self.alpha - 0.01)
 
     def set_selection_pressure(self) -> None:
         """
@@ -555,4 +635,3 @@ class r0701014:
 
 TSP = r0701014()
 TSP.optimize('tour29.csv')
-
