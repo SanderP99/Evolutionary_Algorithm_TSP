@@ -59,6 +59,11 @@ def alias_draw(j, q):
         return j[kk]
 
 
+# TODO: multiple crossovers?
+# TODO: Edge crossover?
+# TODO: multiple mutation?
+# TODO: local search on everything?
+
 class r0701014:
 
     def __init__(self) -> None:
@@ -67,7 +72,6 @@ class r0701014:
         self.tour_size: int = 0  # Number of cities in a tour
         self.generation: int = 0  # Current generation
         self.nearest_neighbors = None
-        self.improved_tours = {}
 
         # EA parameters
         self.population_size: int = 16  # Number of individuals in population
@@ -77,7 +81,7 @@ class r0701014:
         self.selection_pressure_decay = 0  # The factor for the decay of the selection pressure in geometric decay
         self.alpha = 0.15  # The mutation rate
         self.rcl = 0.1  # Fraction that a solution can be longer than the greedy solution
-        self.number_of_nearest_neighbors = 15
+        self.number_of_nearest_neighbors = 15  # Number of NN used in the 3 opt local search
 
         # EA options
         self.use_random_initialization: bool = False  # Use a random initialization instead of heuristic methods
@@ -125,8 +129,6 @@ class r0701014:
             if self.mean_objective != np.inf:
                 self.alpha = 0.2 * self.mean_objective / (self.best_objective + self.mean_objective)
 
-            # self.naive_2_opt(population[0])
-
             # Call the reporter with:
             #  - the mean objective function value of the population
             #  - the best objective function value of the population
@@ -170,6 +172,7 @@ class r0701014:
         otherwise the population has size population_size.
         """
         if self.population_size < self.tour_size:
+            # Less individuals than the length of the tour
             nn = np.zeros([self.population_size, self.tour_size], dtype=np.int)
             random_tours = np.random.choice(np.arange(self.tour_size), self.population_size, replace=False)
             minimal_value_index = \
@@ -181,6 +184,7 @@ class r0701014:
                 nn[i] = self.make_greedy_tour(x)
             return nn
         else:
+            # Create all heuristic individuals and fill the rest with random individuals
             nn = np.zeros([self.tour_size, self.tour_size], dtype=np.int)
             for i in range(self.tour_size):
                 new_tour = self.make_greedy_tour(i)
@@ -212,6 +216,7 @@ class r0701014:
                     i = city
                     break
                 except KeyError:
+                    # The city is already used, because there are multiple minimal values
                     pass
         return individual
 
@@ -307,6 +312,14 @@ class r0701014:
         return offspring
 
     def pmx(self, individuals):
+        """
+        Perform partially mapped crossover (PMX) on the parents. This chooses two crossover points at random and copies
+        the subtour between these points to each of the children. The rest of the nodes are then mapped according to the
+        structure of both parents to guarantee no duplicate nodes. This algorithm is described in the book of Eiben and
+        Smith.
+        :param individuals: The two parents to apply the crossover on
+        :return: The two children created from the parents.
+        """
         parent1 = individuals[0]
         parent2 = individuals[1]
         child1 = parent1.copy()
@@ -318,15 +331,15 @@ class r0701014:
         for i in range(self.tour_size):
             p1[child1[i]] = i
             p2[child2[i]] = i
+
         # Choose crossover points
-        # print('size ' + str(size))
         cxpoint1 = np.random.randint(0, self.tour_size)
         cxpoint2 = np.random.randint(0, self.tour_size - 1)
         if cxpoint2 >= cxpoint1:
             cxpoint2 += 1
         else:  # Swap the two cx points
             cxpoint1, cxpoint2 = cxpoint2, cxpoint1
-        # print('slicing between ' + str(cxpoint1) + ' and ' + str(cxpoint2))
+
         # Apply crossover between cx points
         for i in range(cxpoint1, cxpoint2):
             # Keep track of the selected values
@@ -634,7 +647,22 @@ class r0701014:
         return individual
 
     def local_search_optimized_3_opt(self, individual: np.array) -> np.array:
-
+        """
+        This local search operator searches for a local minimum by swapping two arcs in the individual. For an
+        individual with arcs ABC it creates individual ACB if the solution is shorter. To find possible shorter
+        solutions it loops through the list of nearest neighbors for the starting point and creates two splitting points
+        (the third is between the start and end of the representation) to create the arcs. To change the start and end
+        point of the individual the individual is rolled a random value first. This operation is less expensive than the
+        naive 3 opt local search, but has slightly worse results. The difference will probably not get noticed because
+        more iterations are possible due to the operator being less expensive. The idea to use the neighbourhood list
+        came from:
+        https://www-sciencedirect-com.kuleuven.ezproxy.kuleuven.be/science/article/pii/S0957417412002734#b0025
+        https://dl-acm-org.kuleuven.ezproxy.kuleuven.be/doi/10.5555/320176.320186
+        Sometimes also called the Kanellakis-Papadimitriou algorithm.
+        :param individual: The individual to perform the local search on.
+        :return: The optimized individual.
+        """
+        # Use negative number to not go out of bounds
         individual = np.roll(individual, -np.random.randint(self.tour_size))
 
         for point1 in range(self.tour_size):
@@ -673,26 +701,6 @@ class r0701014:
         with all the objective values.
         """
         return np.apply_along_axis(self.length_individual, 1, individuals)
-
-    def length_diversity(self, individuals: np.array) -> np.array:
-        """
-        Calculate the objective values of a population with a penalty term for being too similar to other individuals in
-        the population.
-        :param individuals: The individuals to calculate the modified objective values from.
-        :return: The objective values for the individuals.
-        """
-        same_starting_point = np.apply_along_axis(self.set_same_starting_point, 1, individuals)
-        modified_objective_values = np.zeros(same_starting_point.shape[0])
-
-        for i, x in enumerate(same_starting_point):
-            distances = self.distances(x, same_starting_point)
-            beta = self.beta
-            neighbors = np.nonzero(distances < self.sigma)[0]
-            for neighbor in neighbors:
-                beta += 1 - (distances[neighbor] / self.sigma) ** self.alpha_fitness_sharing
-
-            modified_objective_values[i] = self.length_individual(x) * beta
-        return modified_objective_values
 
     def length_individual(self, individual: np.array) -> float:
         """
