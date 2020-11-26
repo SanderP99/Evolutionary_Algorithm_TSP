@@ -1,6 +1,5 @@
 import Reporter
 import numpy as np
-import random
 
 
 def alias_setup(probabilities):
@@ -60,72 +59,73 @@ def alias_draw(j, q):
         return j[kk]
 
 
-# TODO: Test all combinations of mutation and recombination to find best solution
-# TODO: Convergence criterion
 class r0701014:
 
-    def __init__(self):
-        self.reporter = Reporter.Reporter(self.__class__.__name__)
-        self.distance_matrix = None
-        self.tour_size = 0
-        self.generation = 0
+    def __init__(self) -> None:
+        self.reporter = Reporter.Reporter(self.__class__.__name__)  # The reporter for the results
+        self.distance_matrix: np.array = None  # Distance matrix
+        self.tour_size: int = 0  # Number of cities in a tour
+        self.generation: int = 0  # Current generation
+        self.nearest_neighbors = None
+        self.improved_tours = {}
 
         # EA parameters
-        self.population_size = 100
-        self.offspring_size = 60
-        self.k = 3
-        self.alpha = 0.10
-        self.beta = 0
-        self.sigma = 4
-        self.alpha_fitness_sharing = 1
-        self.rcl = 0.1
-        self.selection_pressure = 0.01
-        self.selection_pressure_decay = 0.99
-        self.use_random_initialization = False
+        self.population_size: int = 16  # Number of individuals in population
+        self.offspring_size: int = 60  # Number of children created per generation
+        self.k: int = 3  # The k used in k-tournament selection
+        self.selection_pressure = 0  # The selection pressure used
+        self.selection_pressure_decay = 0  # The factor for the decay of the selection pressure in geometric decay
+        self.alpha = 0.15  # The mutation rate
+        self.rcl = 0.1  # Fraction that a solution can be longer than the greedy solution
+        self.number_of_nearest_neighbors = 15
+
+        # EA options
+        self.use_random_initialization: bool = False  # Use a random initialization instead of heuristic methods
 
         # EA functions
-        self.selection_function = self.selection_roulette_wheel
-        self.recombination_function = self.sequential_constructive_crossover
-        self.mutation_function = self.reverse_sequence_mutation
-        self.elimination_function = self.lambda_and_mu_elimination
-        self.distance_function = self.distance_hamming
+        self.selection_function = self.selection_roulette_wheel  # Selection function to use
+        self.recombination_function = self.sequential_constructive_crossover  # Recombination function to use
+        self.mutation_function = self.reverse_sequence_mutation  # Mutation function to use
+        self.elimination_function = self.lambda_and_mu_elimination  # Elimination function to use
+        # self.distance_function = self.distance_hamming  # Distance function to use
 
         # EA scores
-        self.mean_objective = np.inf
-        self.best_objective = 0
-        self.best_solution = None
-        self.last_mean_objective = 0
+        self.mean_objective: float = np.inf  # Mean objective value of the current generation
+        self.best_objective: float = 0  # Best objective value of the current generation
+        self.best_solution: np.array = None  # Best solution of the current generation
+        self.last_mean_objective: float = 0  # Best objective value of the previous generation
 
-        # Function bases logic
-        if self.selection_function == self.selection_rank_geometric_decay or \
-                self.selection_function == self.selection_roulette_wheel:
-            self.selection_pressure = 0.999
+        self.set_selection_pressure()  # Depending on the selection function, the selection pressure will be different
 
-    # The evolutionary algorithm's main loop
-    def optimize(self, filename):
-        # Read distance matrix from file.
-        file = open(filename)
-        self.distance_matrix = np.loadtxt(file, delimiter=",")
-        file.close()
+    def optimize(self, filename: str):
+        """
+        The main loop of the genetic algorithm.
+        :param filename: The filename of the tour for which a candidate solution needs to be found.
+        """
+        # Read the distance matrix from file
+        self.distance_matrix = np.loadtxt(filename, delimiter=",")
         self.tour_size = self.distance_matrix.shape[0]
+        self.build_nearest_neighbor_list()
 
-        self.set_selection_pressure()
-
-        population = self.initialization()
+        population = self.initialize_population()
 
         while not self.is_converged():
-            population = self.roll_population(population)
             offspring = self.recombination(population)
-            joined_population = self.mutation(population, offspring)
-            population, scores = self.elimination(joined_population)
+
+            mutated_population = self.mutation(population, offspring)
+
+            for index, individual in enumerate(mutated_population):
+                mutated_population[index] = self.local_search_optimized_3_opt(individual)
+
+            population, scores = self.elimination(mutated_population)
             population, scores = self.fitness_sharing_elimination(population, scores)
             population, scores = self.elitism(population, scores)
-            if (population[0] == self.best_solution).all():
-                population[1] = self.local_search_2_opt(population[1])
-            else:
-                population[0] = self.local_search_2_opt(population[0])
+
             self.update_scores(population[0], scores)
-            self.alpha = 0.2 * self.mean_objective / (self.best_objective + self.mean_objective)
+            if self.mean_objective != np.inf:
+                self.alpha = 0.2 * self.mean_objective / (self.best_objective + self.mean_objective)
+
+            # self.naive_2_opt(population[0])
 
             # Call the reporter with:
             #  - the mean objective function value of the population
@@ -136,14 +136,13 @@ class r0701014:
             if time_left < 0:
                 break
 
-        # Your code here.
         return 0
 
     ####################
     #  INITIALIZATION  #
     ####################
 
-    def initialization(self) -> np.array:
+    def initialize_population(self) -> np.array:
         """
         :return: Returns an initial population for the evolutionary algorithm to use. The population is a  numpy array
         of dimensions population_size by tour_size. Each row in the array represents an individual in the population.
@@ -151,42 +150,45 @@ class r0701014:
         This permutation represents the order in which the individual visits the cities.
         """
         if not self.use_random_initialization:
-            if self.tour_size < self.population_size:
-                population = np.empty([self.population_size - self.tour_size, self.tour_size], dtype=np.int32)
-                population = np.concatenate([self.all_nearest_neighbors(), population])
-                for i in range(self.tour_size, self.population_size, 1):
-                    individual = np.arange(self.tour_size)
-                    np.random.shuffle(individual)
-                    individual = self.local_search_2_opt(individual)
-                    population[i] = individual
-                return population
+            if self.tour_size > self.population_size:
+                # Create random heuristic solutions
+                population = self.all_nearest_neighbors()
             else:
-                return self.all_nearest_neighbors()[:self.population_size]
+                # Create all heuristic solutions and randomly generate the rest
+                heuristic_population = self.all_nearest_neighbors()
+                random_population = self.random_population(self.population_size - self.tour_size)
+                population = np.concatenate([heuristic_population, random_population])
         else:
-            population = np.empty([self.population_size, self.tour_size], dtype=np.int32)
-            for i in range(self.population_size):
-                print(i)
-                individual = np.arange(self.tour_size)
-                np.random.shuffle(individual)
-                if self.tour_size > 100 and i % 5 == 0:
-                    individual = self.local_search_2_opt(individual)
-                population[i] = individual
-            return population
+            # Completely random population
+            population = self.random_population(self.population_size)
+        return population
 
     def all_nearest_neighbors(self) -> np.array:
         """
         Creates an initial population using a greedy algorithm starting from every possible starting point.
-        :return: The population of size self.tour_size.
+        :return: The population of size self.tour_size in case that the tour size is smaller than the population size,
+        otherwise the population has size population_size.
         """
         if self.population_size < self.tour_size:
             nn = np.zeros([self.population_size, self.tour_size], dtype=np.int)
-            for i in range(self.population_size):
-                nn[i] = self.make_greedy_tour(i)
+            random_tours = np.random.choice(np.arange(self.tour_size), self.population_size, replace=False)
+            minimal_value_index = \
+                np.argwhere(self.distance_matrix == np.min(self.distance_matrix[self.distance_matrix != 0]))[0][0]
+            if minimal_value_index not in random_tours:
+                random_tours[0] = minimal_value_index
+
+            for i, x in enumerate(random_tours):
+                nn[i] = self.make_greedy_tour(x)
             return nn
         else:
             nn = np.zeros([self.tour_size, self.tour_size], dtype=np.int)
             for i in range(self.tour_size):
-                nn[i] = self.make_greedy_tour(i)
+                new_tour = self.make_greedy_tour(i)
+                k = 1
+                while new_tour == np.inf:
+                    new_tour = self.make_greedy_tour(i + k)
+                    k += 1
+                nn[i] = new_tour
             return nn
 
     def make_greedy_tour(self, i: int) -> np.array:
@@ -213,6 +215,19 @@ class r0701014:
                     pass
         return individual
 
+    def random_population(self, n: int) -> np.array:
+        """
+        Creates a random population of size n
+        :param n: The size of the population to generate.
+        :return: The generated population.
+        """
+        population = np.empty([n, self.tour_size], dtype=np.int32)
+        for i in range(n):
+            individual = np.arange(self.tour_size)
+            np.random.shuffle(individual)
+            population[i] = individual
+        return population
+
     ###############
     #  SELECTION  #
     ###############
@@ -224,13 +239,13 @@ class r0701014:
         :param n: The number of individuals to select
         :return: Returns n individuals in a numpy array
         """
-        selection = np.empty((n, self.tour_size))
+        selection = np.empty((n, self.tour_size), dtype=np.int)
         for i in range(n):
             individuals = population[np.random.choice(self.population_size, self.k, replace=True), :]
             objective_values = self.length(individuals)
             perm = np.argsort(objective_values)
             selection[i] = individuals[perm[0]]
-        return selection.astype('int')
+        return selection
 
     def selection_roulette_wheel(self, population: np.array, n: int = 1) -> np.array:
         """
@@ -247,10 +262,10 @@ class r0701014:
         probabilities = np.exp(a * (np.arange(1, self.population_size + 1) - 1))
         probabilities /= np.sum(probabilities)
         j, q = alias_setup(probabilities)
-        selection = np.zeros([n, self.tour_size])
+        selection = np.zeros([n, self.tour_size], dtype=np.int)
         for i in range(n):
             selection[i] = population[int(alias_draw(j, q))]
-        return selection.astype('int')
+        return selection
 
     def selection_rank_linear(self, population: np.array, n: int = 1) -> np.array:
         """
@@ -263,20 +278,6 @@ class r0701014:
         total_rank = self.population_size * (self.population_size + 1) / 2  # Sum 1..N = N * (N-1) / 2
         probabilities = np.arange(1, self.population_size + 1)[::-1] / total_rank
         return population[np.random.choice(self.population_size, size=n, replace=True, p=probabilities), :]
-
-    def selection_rank_geometric_decay(self, population: np.array, n: int = 1) -> np.array:
-        """
-        Selection operator used to select n individuals from the population. This operator uses rank based selection
-        with exponential decay and a geometric decaying selection pressure.
-        :param population: The population to select the individuals from.
-        :param n: The number of individuals to select.
-        :return: The selected individuals.
-        """
-        self.selection_pressure *= self.selection_pressure_decay
-        a = np.log(self.selection_pressure) / (self.population_size - 1)
-        probabilities = np.exp(a * (np.arange(1, self.population_size + 1) - 1))
-        probabilities /= np.sum(probabilities)
-        return population[np.random.choice(self.population_size, size=n, replace=True, p=probabilities)]
 
     ###################
     #  RECOMBINATION  #
@@ -291,20 +292,19 @@ class r0701014:
         :return: Returns the offspring created by the recombination operator. The number of offspring created is
         specified by self.offspring_size.
         """
+        offspring = np.empty([self.offspring_size, self.tour_size], dtype=np.int)
         if self.recombination_function != self.sequential_constructive_crossover:
-            offspring = np.empty([self.offspring_size, self.tour_size])
+            # Produce two children per two parents
             selection = self.selection_function(population, self.offspring_size)
             for i in range(0, self.offspring_size, 2):
                 offspring[i], offspring[i + 1] = self.recombination_function([selection[i], selection[i + 1]])
-
-            return offspring.astype('int')
         else:
-            offspring = np.empty([self.offspring_size, self.tour_size])
+            # Produce one child per two parents
             selection = self.selection_function(population, self.offspring_size * 2)
             for i in range(self.offspring_size):
                 offspring[i] = self.recombination_function([selection[i], selection[i + 1]])
 
-            return offspring.astype('int')
+        return offspring
 
     def pmx(self, individuals):
         parent1 = individuals[0]
@@ -320,8 +320,8 @@ class r0701014:
             p2[child2[i]] = i
         # Choose crossover points
         # print('size ' + str(size))
-        cxpoint1 = random.randint(0, self.tour_size)
-        cxpoint2 = random.randint(0, self.tour_size - 1)
+        cxpoint1 = np.random.randint(0, self.tour_size)
+        cxpoint2 = np.random.randint(0, self.tour_size - 1)
         if cxpoint2 >= cxpoint1:
             cxpoint2 += 1
         else:  # Swap the two cx points
@@ -387,17 +387,20 @@ class r0701014:
         parent1, parent2 = individuals
         child = np.zeros(self.tour_size)
         child[0] = 0
-        nodes_used = set([0])
+        nodes_used = {0}
 
         for i in range(1, self.tour_size, 1):
             previous_node = int(child[i - 1])
+
             node_parent1 = self.find_first_node(previous_node, parent1, nodes_used)
             node_parent2 = self.find_first_node(previous_node, parent2, nodes_used)
+
             cost_parent1 = self.distance_matrix[previous_node][node_parent1]
             cost_parent2 = self.distance_matrix[previous_node][node_parent2]
             if cost_parent1 < cost_parent2:
                 nodes_used.add(node_parent1)
                 child[i] = node_parent1
+
             else:
                 nodes_used.add(node_parent2)
                 child[i] = node_parent2
@@ -405,6 +408,14 @@ class r0701014:
         return child
 
     def find_first_node(self, previous_node: int, parent: np.array, nodes_used: set) -> int:
+        """
+        Finds the node after a given node that is not already used.
+        :param previous_node: The node to start from.
+        :param parent: The parent sequence in which to search the next possible node.
+        :param nodes_used: The nodes that are already used in the child.
+        :return: The first possible node found in the parent that matches the two criteria: if comes after previous_node
+        and it is not in the nodes_used set.
+        """
         index_previous_node = np.where(parent == previous_node)[0][0]
         for i in range(index_previous_node + 1, self.tour_size, 1):
             if parent[i] not in nodes_used:
@@ -458,7 +469,9 @@ class r0701014:
                 a, b = points[i]
             else:
                 b, a = points[i]
-            population[i] = np.hstack([individual[:a], np.flip(individual[a:b]), individual[b:]])
+
+            individual = np.hstack([individual[:a], np.flip(individual[a:b]), individual[b:]])
+            population[i] = individual
         return population
 
     def partial_shuffle_mutation(self, population: np.array) -> np.array:
@@ -541,7 +554,17 @@ class r0701014:
                 scores[0], scores[-1] = scores[-1], scores[0]
                 return population, scores
 
+    ###############
+    #  DIVERSITY  #
+    ###############
+
     def fitness_sharing_elimination(self, joined_population, objective_values):
+        """
+        https://arxiv.org/pdf/1702.03594.pdf
+        :param joined_population:
+        :param objective_values:
+        :return:
+        """
         new_population = np.zeros([self.population_size, self.tour_size], dtype=np.int)
         perm = np.argsort(objective_values)
         sorted_population = joined_population[perm]
@@ -554,6 +577,90 @@ class r0701014:
             else:
                 new_population[i] = sorted_population[i]
         return new_population, self.length(new_population)
+
+    ############################
+    #  LOCAL SEARCH OPERATORS  #
+    ############################
+
+    def local_search_swap(self, individual: np.array) -> np.array:
+        """
+        This local search operator loops through the individual and if a combination ABCD is found for which the
+        combination ACBD is shorter then it swaps nodes B and C. This operator is very fast because it will only loop
+        through the individual once. But therefore it will not create very good solutions because it can only look at
+        four nodes at a time.
+        :param individual: The individual to perform the local search on.
+        :return:
+        """
+        for i in range(self.tour_size):
+            a = individual[i - 1]
+            b = individual[i]
+            c = individual[(i + 1) % self.tour_size]
+            d = individual[(i + 2) % self.tour_size]
+
+            normal_distance = self.distance_matrix[a][b] + self.distance_matrix[b][c] + self.distance_matrix[c][d]
+            new_distance = self.distance_matrix[a][c] + self.distance_matrix[c][b] + self.distance_matrix[b][d]
+            if new_distance < normal_distance:
+                individual[i], individual[(i + 1) % self.tour_size] = individual[(i + 1) % self.tour_size], individual[
+                    i]
+        return individual
+
+    def local_search_naive_3_opt(self, individual: np.array) -> np.array:
+        """
+        This local search operator searches for a local minimum by swapping two arcs in the individual. For an
+        individual with arcs ABC it creates individual ACB if the solution is shorter. To find possible shorter
+        solutions it loops through the list and creates two splitting points (the third is between the start and end
+        of the representation) to create the arcs. This is a very expensive approach, but the results are better than
+        the local_search_swap operator because of the bigger neighborhood structure.
+        :param individual: The individual to perform the local search on.
+        :return: The optimized individual.
+        """
+        for point1 in range(self.tour_size):
+            v1 = individual[0]
+            v2 = individual[point1 - 1]
+            v3 = individual[point1]
+            v6 = individual[-1]
+            for point2 in range(point1 + 1, self.tour_size):
+                v4 = individual[point2 - 1]
+                v5 = individual[point2]
+                old_distance = self.distance_matrix[v2][v3] + self.distance_matrix[v4][v5] + self.distance_matrix[v6][
+                    v1]
+                new_distance = self.distance_matrix[v2][v5] + self.distance_matrix[v6][v3] + self.distance_matrix[v4][
+                    v1]
+                if new_distance < old_distance:
+                    a = individual[:point1]
+                    b = individual[point1:point2]
+                    c = individual[point2:]
+                    individual = np.concatenate([a, c, b])
+        return individual
+
+    def local_search_optimized_3_opt(self, individual: np.array) -> np.array:
+
+        individual = np.roll(individual, -np.random.randint(self.tour_size))
+
+        for point1 in range(self.tour_size):
+            v1 = individual[0]
+            v2 = individual[point1 - 1]
+            v3 = individual[point1]
+            v6 = individual[-1]
+
+            for i, neighbor in enumerate(self.nearest_neighbors[v2]):
+                point2 = np.where(individual == neighbor)[0][0]
+                if point2 > point1:
+                    v4 = individual[point2 - 1]
+                    v5 = individual[point2]
+                    old_distance = self.distance_matrix[v2][v3] + self.distance_matrix[v4][v5] + \
+                                   self.distance_matrix[v6][
+                                       v1]
+                    new_distance = self.distance_matrix[v2][v5] + self.distance_matrix[v6][v3] + \
+                                   self.distance_matrix[v4][
+                                       v1]
+                    if new_distance < old_distance:
+                        a = individual[:point1]
+                        b = individual[point1:point2]
+                        c = individual[point2:]
+                        individual = np.concatenate([a, c, b])
+
+        return individual
 
     ########################
     #  OBJECTIVE FUNCTIONS #
@@ -598,90 +705,18 @@ class r0701014:
         distance += self.distance_matrix[individual[-1]][individual[0]]
         return distance
 
-    #########################
-    #  DIVERSITY PROMOTION  #
-    #########################
+    #####################
+    # HELPER FUNCTIONS  #
+    #####################
 
-    def distances(self, individual: np.array, population: np.array) -> np.array:
-        distances = np.zeros(population.shape[0], dtype=np.int)
-        for i in range(population.shape[0]):
-            distances[i] = self.distance_function(individual, population[i])
-
-        return distances
-
-    def distance(self, perm1: list, perm2: list) -> float:
-        distance = 0
-        for i in range(self.tour_size - 1):
-            element = perm1[i]
-            x = perm2.index(element)
-
-            y = 0 if x == self.tour_size - 1 else x + 1
-            if perm1[i + 1] != perm2[y]:
-                distance += 1
-
-        element = perm1[-1]
-        x = perm2.index(element)
-        if perm1[0] != perm2[x + 1]:
-            distance += 1
-
-        return distance
-
-    def distance_hamming(self, perm1, perm2):
-        """
-        Returns the hamming distance between two permutations (number of elements that are different).
-        :param perm1: The first permutation.
-        :param perm2: The second permutation.
-        :return: The hamming distance between two permutations (number of elements that are different).
-        """
-        return np.count_nonzero(perm1 != perm2)
-
-    ############################
-    #  LOCAL SEARCH OPERATORS  #
-    ############################
-
-    def local_search_2_opt(self, individual: np.array) -> np.array:
-        improved_tour = np.array(individual, copy=True)
-        k = 0
-        while k <= 0:
-            for i in np.arange(self.tour_size - 1):
-                city1 = individual[i]
-                city2 = individual[i + 1]
-                distance_12 = self.distance_matrix[city1][city2]
-                for j in np.arange(i + 2, self.tour_size - 1):
-                    city3 = individual[j]
-                    city4 = individual[j + 1]
-                    distance_13 = self.distance_matrix[city1][city3]
-                    distance_34 = self.distance_matrix[city3][city4]
-                    distance_24 = self.distance_matrix[city2][city4]
-                    if distance_12 + distance_34 > distance_13 + distance_24:
-                        improved_tour[i + 1], improved_tour[j] = improved_tour[j], improved_tour[i + 1]
-                if self.length_individual(improved_tour) > self.length_individual(individual):
-                    improved_tour = individual
-                else:
-                    individual = improved_tour
-            k += 1
-        return improved_tour
-
-    ######################
-    #  HELPER FUNCTIONS  #
-    ######################
-
-    def is_converged(self) -> bool:
+    def is_converged(self):
         """
         :return: Returns True if the algorithm has converged, False if not.
         """
-        # All solutions are the same
-        # if self.mean_objective == self.best_objective:
-        #     return True
-
-        # # No improvement
-        if self.last_mean_objective == self.mean_objective and self.generation > 500:
-            return True
-
-        # Not converged
-        else:
+        # TODO: create better convergence criterion
+        if self.generation < 500:
             return False
-        # return False
+        return True
 
     def update_scores(self, individual: np.array, scores: np.array) -> None:
         """
@@ -696,28 +731,24 @@ class r0701014:
         self.best_solution = individual
         self.generation += 1
 
-        if self.mean_objective < 1.05 * self.best_objective:
-            self.selection_function = self.selection_k_tournament
-            print(self.generation)
-
     def set_selection_pressure(self) -> None:
         """
         Sets the selection pressure according to the problem size. This makes it that the algorithm should not converge
         too quickly.
         """
-        if self.selection_function == self.selection_rank_geometric_decay:
-            self.selection_pressure = float('0.' + '9' * int(self.tour_size / 100 + 3))
+        if self.selection_function == self.selection_roulette_wheel:
+            self.selection_pressure = 0.99
             self.selection_pressure_decay = self.selection_pressure
         else:
             self.selection_pressure = 0.01
 
-    def set_same_starting_point(self, individual: np.array) -> np.array:
-        index = np.argmax(individual == 0)
-        # print(np.where(individual == 0)[0][0])
-        # print(np.nonzero(individual == 0)[0][0])
-        return np.roll(individual, -index)
-
-    def greedy_randomized_algorithm(self):
+    def greedy_randomized_algorithm(self) -> np.array:
+        """
+        Create a greedy randomized individual. Instead of always taking the greedy option, it is possible to take an
+        option that is almost as good as the greedy option. This allows for some extra randomness in the creation of
+        the individuals.
+        :return: The individual created.
+        """
         individual = np.zeros(self.tour_size, dtype=np.int)
         individual[0] = np.random.randint(0, self.tour_size)
         for i in range(1, self.tour_size, 1):
@@ -725,7 +756,12 @@ class r0701014:
             individual[i] = np.random.choice(restricted_candidate_list, 1)[0]
         return individual
 
-    def build_restricted_candidate_list(self, indices):
+    def build_restricted_candidate_list(self, indices: np.array) -> np.array:
+        """
+        Find all next possible nodes that are almost as good as the greedy solution. This set can be used in
+        :param indices: The indices already used in the individual the algorithm is trying to create.
+        :return: The list of all candidate nodes.
+        """
         last_index = indices[-1]
         not_used = set(range(self.tour_size)) - set(indices[:-1])
         not_used.remove(last_index)
@@ -733,13 +769,17 @@ class r0701014:
         minimal_distance = np.min(self.distance_matrix[last_index][list(not_used)])
         allowed_distance = (1 + self.rcl) * minimal_distance
         for x in not_used:
-            if self.distance_matrix[last_index][x] < allowed_distance:
+            if self.distance_matrix[last_index][x] <= allowed_distance:
                 candidates.append(x)
         return np.array(candidates)
 
-    def roll_population(self, population):
-        return np.roll(population, np.random.randint(self.tour_size - 1), axis=1)
+    def build_nearest_neighbor_list(self):
+        self.nearest_neighbors = np.empty([self.tour_size, self.number_of_nearest_neighbors], dtype=np.int)
+        for i in range(self.tour_size):
+            self.nearest_neighbors[i] = np.argsort(self.distance_matrix[i])[1:self.number_of_nearest_neighbors + 1]
 
 
 TSP = r0701014()
-TSP.optimize('tour194.csv')
+# TSP.tour_size = 29
+# TSP.naive_3_opt([1, 2, 3, 4, 5])
+TSP.optimize('tour929.csv')
