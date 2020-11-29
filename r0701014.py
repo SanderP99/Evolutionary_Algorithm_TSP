@@ -59,14 +59,14 @@ def alias_draw(j, q):
         return j[kk]
 
 
-# TODO: multiple crossovers?
-# TODO: Edge crossover?
-# TODO: multiple mutation?
-# TODO: different diversity promotion scheme
+# TODO: multiple crossovers
+# TODO: Edge crossover
+# TODO: multiple mutation
+# TODO: try different distance function
+# TODO: try 3-opt with three loops
 class r0701014:
 
     def __init__(self) -> None:
-        self.same_best_objective = None
         self.reporter = Reporter.Reporter(self.__class__.__name__)  # The reporter for the results
         self.distance_matrix: np.array = None  # Distance matrix
         self.tour_size: int = 0  # Number of cities in a tour
@@ -82,6 +82,7 @@ class r0701014:
         self.alpha = 0.15  # The mutation rate
         self.rcl = 0.1  # Fraction that a solution can be longer than the greedy solution
         self.number_of_nearest_neighbors = 15  # Number of NN used in the 3 opt local search
+        self.sigma = 0  # Sigma used in the fitness sharing
 
         # EA options
         self.use_random_initialization: bool = False  # Use a random initialization instead of heuristic methods
@@ -112,6 +113,7 @@ class r0701014:
         # Read the distance matrix from file
         self.distance_matrix = np.loadtxt(filename, delimiter=",")
         self.tour_size = self.distance_matrix.shape[0]
+        self.sigma = np.floor(0.05 * self.tour_size)
         self.build_nearest_neighbor_list()
 
         population = self.initialize_population()
@@ -123,11 +125,10 @@ class r0701014:
 
             mutated_population = self.local_search(mutated_population)
 
-            # for index, individual in enumerate(mutated_population):
-            #     mutated_population[index] = self.local_search_optimized_3_opt(individual)
+            population, scores = self.fitness_sharing_elimination(mutated_population)
 
-            population, scores = self.elimination(mutated_population)
-            population, scores = self.fitness_sharing_elimination(population, scores)
+            # population, scores = self.elimination(mutated_population)
+            # population, scores = self.eliminate_duplicate_individuals(population, scores)
             population, scores = self.elitism(population, scores)
 
             self.update_scores(population[0], scores)
@@ -576,7 +577,45 @@ class r0701014:
     #  DIVERSITY  #
     ###############
 
-    def fitness_sharing_elimination(self, joined_population, objective_values):
+    def fitness_sharing_elimination(self, population: np.array) -> np.array:
+        scores = self.length(population)
+        perm = np.argsort(scores)
+        population = population[perm]
+        scores = scores[perm]
+
+        new_population = np.zeros([self.population_size, self.tour_size], dtype=np.int)
+        new_population[0] = population[0]
+        penalties = np.ones([population.shape[0]])
+        penalties = self.compute_distance(population[0], population, penalties)
+        for i in range(1, self.population_size):
+            corrected_scores = scores * penalties
+            new_population[i] = population[np.argsort(corrected_scores)[0]]
+            penalties = self.compute_distance(new_population[i], population, penalties)
+        return new_population, self.length(new_population)
+
+    def compute_distance(self, individual_to_compute_distance_from, population, penalties) -> np.array:
+        for i, individual in enumerate(population):
+            distance = self.distance_function(individual_to_compute_distance_from, individual)
+            if distance <= self.sigma:
+                penalties[i] += 1 - distance / self.sigma
+        return penalties
+
+    def distance_function(self, perm1, perm2):
+        distance = 0
+        for i in range(self.tour_size - 1):
+            element = perm1[i]
+            x = np.where(perm2 == element)[0][0]
+            y = 0 if x == self.tour_size - 1 else x + 1
+            if perm1[i + 1] != perm2[y]:
+                distance += 1
+        element = perm1[-1]
+        x = np.where(perm2 == element)[0][0]
+        if perm1[0] != perm2[(x + 1) % self.tour_size]:
+            distance += 1
+
+        return distance
+
+    def eliminate_duplicate_individuals(self, joined_population, objective_values):
         """
         https://arxiv.org/pdf/1702.03594.pdf
         :param joined_population:
@@ -589,12 +628,12 @@ class r0701014:
         sorted_objective_values = objective_values[perm]
         new_population[0] = sorted_population[0]
         for i in range(1, self.population_size, 1):
-            if sorted_objective_values[i - 1] == sorted_objective_values[i] and \
-                    (sorted_population[i] == sorted_population[i - 1]).all():
+            if sorted_objective_values[i - 1] == sorted_objective_values[i]:
                 new_population[i] = self.greedy_randomized_algorithm()
             else:
                 new_population[i] = sorted_population[i]
-        return new_population, self.length(new_population)
+        new_scores = self.length(new_population)
+        return new_population, new_scores
 
     ############################
     #  LOCAL SEARCH OPERATORS  #
@@ -734,9 +773,8 @@ class r0701014:
         :return: Returns True if the algorithm has converged, False if not.
         """
         # TODO: create better convergence criterion
-        if self.same_best_objective >= 20:
+        if self.same_best_objective >= 30:
             return True
-
         return False
 
     def update_scores(self, individual: np.array, scores: np.array) -> None:
