@@ -537,6 +537,11 @@ class r0701014:
     #################
 
     def elimination(self, joined_population: np.array) -> (np.array, np.array):
+        """
+        Calls the elimination scheme specified in self.elimination_function
+        :param joined_population: The population to perform the elimination on
+        :return: The population after elimination sorted by fitness value and a list of the corresponding fitness values
+        """
         return self.elimination_function(joined_population)
 
     def lambda_and_mu_elimination(self, joined_population: np.array) -> (np.array, np.array):
@@ -577,7 +582,13 @@ class r0701014:
     #  DIVERSITY  #
     ###############
 
-    def fitness_sharing_elimination(self, population: np.array) -> np.array:
+    def fitness_sharing_elimination(self, population: np.array) -> (np.array, np.array):
+        """
+        This function tries to promote diversity in the population by giving a penalty to individuals that resemble too
+        much an individual already in the next generation.
+        :param population: The population to perform this scheme on
+        :return: The new population after the elimination scheme and their respective scores
+        """
         scores = self.length(population)
         perm = np.argsort(scores)
         population = population[perm]
@@ -586,21 +597,37 @@ class r0701014:
         new_population = np.zeros([self.population_size, self.tour_size], dtype=np.int)
         new_population[0] = population[0]
         penalties = np.ones([population.shape[0]])
-        penalties = self.compute_distance(population[0], population, penalties)
+        penalties = self.compute_penalties(population[0], population, penalties)
         for i in range(1, self.population_size):
             corrected_scores = scores * penalties
             new_population[i] = population[np.argsort(corrected_scores)[0]]
-            penalties = self.compute_distance(new_population[i], population, penalties)
+            penalties = self.compute_penalties(new_population[i], population, penalties)
         return new_population, self.length(new_population)
 
-    def compute_distance(self, individual_to_compute_distance_from, population, penalties) -> np.array:
+    def compute_penalties(self, individual_to_compute_distance_from, population, penalties) -> np.array:
+        """
+        This function computes the penalties introduced by an individual already in the next generation on the
+        remaining individuals.
+        :param individual_to_compute_distance_from: The individual that introduces the penalty on the rest of the
+        population
+        :param population: The population to add the penalties to
+        :param penalties: The penalties that already exist due to other individuals.
+        :return: The list with the penalties
+        """
         for i, individual in enumerate(population):
             distance = self.distance_function(individual_to_compute_distance_from, individual)
             if distance <= self.sigma:
                 penalties[i] += 1 - distance / self.sigma
         return penalties
 
-    def distance_function(self, perm1, perm2):
+    def distance_function(self, perm1: np.array, perm2: np.array) -> float:
+        """
+        Computes the distance between two permutations by counting the edges of the first permuatation that are not in
+        the second permutation.
+        :param perm1: The first permutation
+        :param perm2: The second permutation
+        :return: The distance between the two permutations
+        """
         distance = 0
         for i in range(self.tour_size - 1):
             element = perm1[i]
@@ -615,12 +642,15 @@ class r0701014:
 
         return distance
 
-    def eliminate_duplicate_individuals(self, joined_population, objective_values):
+    def eliminate_duplicate_individuals(self, joined_population: np.array, objective_values: np.array) -> (
+            np.array, np.array):
         """
+        This function is an elimination scheme that tries to introduce diversity into the population. If there are two
+        identical individuals in the population then one of them will be replaced by a greedy randomized individual.
         https://arxiv.org/pdf/1702.03594.pdf
-        :param joined_population:
-        :param objective_values:
-        :return:
+        :param joined_population: The population to perform the elimination scheme on.
+        :param objective_values: The objective values of the population in the same order
+        :return: Returns the new population and the respective scores.
         """
         new_population = np.zeros([self.population_size, self.tour_size], dtype=np.int)
         perm = np.argsort(objective_values)
@@ -639,7 +669,14 @@ class r0701014:
     #  LOCAL SEARCH OPERATORS  #
     ############################
 
-    def local_search(self, population):
+    def local_search(self, population: np.array) -> np.array:
+        """
+        Performs local search on the population. The local search operator to use is specified in
+        self.local_search_operator. In self.local_search_on_all is specified if the operator should be applied on
+        all individuals or on 50% of them.
+        :param population: The population to perform local search on
+        :return: The (improved) population
+        """
         if self.local_search_on_all:
             for i, individual in enumerate(population):
                 population[i] = self.local_search_operator(individual)
@@ -727,13 +764,23 @@ class r0701014:
 
         return individual
 
-    def check_for_3_opt_move(self, individual, point1, point2, v1, v2, v3, v4, v5, v6):
-        old_distance = self.distance_matrix[v2][v3] + self.distance_matrix[v4][v5] + \
-                       self.distance_matrix[v6][
-                           v1]
-        new_distance = self.distance_matrix[v2][v5] + self.distance_matrix[v6][v3] + \
-                       self.distance_matrix[v4][
-                           v1]
+    def check_for_3_opt_move(self, individual: np.array, point1: int, point2: int, v1: int, v2: int, v3: int, v4: int,
+                             v5: int, v6: int) -> np.array:
+        """
+        This function checks for a possible 3 opt move for the arcs between endpoints v1-v2, v3-v4 and v5-v6.
+        :param individual: The individual to try the 3 opt move on
+        :param point1: The first crossing point, the point between v2 and v3
+        :param point2: The second crossing point, the point between v4 and v5
+        :param v1: The beginning of the first arc
+        :param v2: The ending of the first arc
+        :param v3: The beginning of the second arc
+        :param v4: The ending of the second arc
+        :param v5: The beginning of the third arc
+        :param v6: The ending of the third arc
+        :return: The individual with the 3 opt move applied (if it is better than not)
+        """
+        old_distance = self.distance_matrix[v2][v3] + self.distance_matrix[v4][v5] + self.distance_matrix[v6][v1]
+        new_distance = self.distance_matrix[v2][v5] + self.distance_matrix[v6][v3] + self.distance_matrix[v4][v1]
         if new_distance < old_distance:
             a = individual[:point1]
             b = individual[point1:point2]
@@ -768,11 +815,10 @@ class r0701014:
     # HELPER FUNCTIONS  #
     #####################
 
-    def is_converged(self):
+    def is_converged(self) -> bool:
         """
         :return: Returns True if the algorithm has converged, False if not.
         """
-        # TODO: create better convergence criterion
         if self.same_best_objective >= 30:
             return True
         return False
@@ -837,7 +883,11 @@ class r0701014:
                 candidates.append(x)
         return np.array(candidates)
 
-    def build_nearest_neighbor_list(self):
+    def build_nearest_neighbor_list(self) -> None:
+        """
+        This function creates the list of the nearest neighbors for all nodes in the tour. This list is then used in
+        the optimized 3 opt local search operator.
+        """
         self.nearest_neighbors = np.empty([self.tour_size, self.number_of_nearest_neighbors], dtype=np.int)
         for i in range(self.tour_size):
             self.nearest_neighbors[i] = np.argsort(self.distance_matrix[i])[1:self.number_of_nearest_neighbors + 1]
