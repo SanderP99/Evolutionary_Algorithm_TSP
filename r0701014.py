@@ -1,5 +1,6 @@
 import Reporter
 import numpy as np
+from multiprocessing import RawArray
 
 
 def alias_setup(probabilities):
@@ -111,8 +112,12 @@ class r0701014:
         :param filename: The filename of the tour for which a candidate solution needs to be found.
         """
         # Read the distance matrix from file
-        self.distance_matrix = np.loadtxt(filename, delimiter=",")
-        self.tour_size = self.distance_matrix.shape[0]
+        data = np.loadtxt(filename, delimiter=",")
+        self.tour_size = data.shape[0]
+        x = RawArray('d', self.tour_size * self.tour_size)
+        self.distance_matrix = np.frombuffer(x, dtype=np.float).reshape(self.tour_size, self.tour_size)
+        np.copyto(self.distance_matrix, data)
+
         self.sigma = np.floor(0.05 * self.tour_size)
         self.build_nearest_neighbor_list()
 
@@ -125,10 +130,10 @@ class r0701014:
 
             mutated_population = self.local_search(mutated_population)
 
-            population, scores = self.fitness_sharing_elimination(mutated_population)
+            # population, scores = self.fitness_sharing_elimination(mutated_population)
 
-            # population, scores = self.elimination(mutated_population)
-            # population, scores = self.eliminate_duplicate_individuals(population, scores)
+            population, scores = self.elimination(mutated_population)
+            population, scores = self.eliminate_duplicate_individuals(population, scores)
             population, scores = self.elitism(population, scores)
 
             self.update_scores(population[0], scores)
@@ -846,4 +851,4 @@ class r0701014:
 TSP = r0701014()
 # TSP.tour_size = 29
 # TSP.naive_3_opt([1, 2, 3, 4, 5])
-TSP.optimize('tour194.csv')
+TSP.optimize('tour29.csv')
