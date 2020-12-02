@@ -1,4 +1,6 @@
 import ctypes
+from functools import partial
+
 import Reporter
 import numpy as np
 from multiprocessing import RawArray, Pool
@@ -6,6 +8,29 @@ from multiprocessing import RawArray, Pool
 # Dictionary to store the location of the arrays used by the parallel processes
 var_dict = {}
 
+
+def distance_function_parallel(perm2: np.array, perm1: np.array) -> float:
+    """
+    Computes the distance between two permutations by counting the edges of the first permutation that are not in
+    the second permutation.
+    :param perm1: The first permutation
+    :param perm2: The second permutation
+    :return: The distance between the two permutations
+    """
+    tour_size = var_dict['tour_size']
+    distance = 0
+    for i in range(tour_size - 1):
+        element = perm1[i]
+        x = np.where(perm2 == element)[0][0]
+        y = 0 if x == tour_size - 1 else x + 1
+        if perm1[i + 1] != perm2[y]:
+            distance += 1
+    element = perm1[-1]
+    x = np.where(perm2 == element)[0][0]
+    if perm1[0] != perm2[(x + 1) % tour_size]:
+        distance += 1
+
+    return distance
 
 def parallel_3_opt(individual: np.array) -> np.array:
     """
@@ -19,7 +44,6 @@ def parallel_3_opt(individual: np.array) -> np.array:
     nearest_neighbors = np.frombuffer(var_dict['nearest_neighbors'], dtype=np.int).reshape(tour_size, 15)
 
     individual = np.roll(individual, -np.random.randint(tour_size))
-
     for point1 in range(tour_size):
         v1 = individual[0]
         v2 = individual[point1 - 1]
@@ -28,10 +52,11 @@ def parallel_3_opt(individual: np.array) -> np.array:
 
         for i, neighbor in enumerate(nearest_neighbors[v2]):
             point2 = np.where(individual == neighbor)[0][0]
-            v4 = individual[point2 - 1]
-            v5 = individual[point2]
             if point2 > point1:
+                v4 = individual[point2 - 1]
+                v5 = individual[point2]
                 individual = check_for_3_opt_move(individual, point1, point2, v1, v2, v3, v4, v5, v6)
+
     return individual
 
 
@@ -54,6 +79,7 @@ def check_for_3_opt_move(individual: np.array, point1: int, point2: int, v1: int
     distance_matrix = np.frombuffer(var_dict['distance_matrix'], dtype=np.float64).reshape(tour_size, tour_size)
     old_distance = distance_matrix[v2][v3] + distance_matrix[v4][v5] + distance_matrix[v6][v1]
     new_distance = distance_matrix[v2][v5] + distance_matrix[v6][v3] + distance_matrix[v4][v1]
+
     if new_distance < old_distance:
         a = individual[:point1]
         b = individual[point1:point2]
@@ -123,7 +149,6 @@ def alias_draw(j, q):
 # TODO: Edge crossover
 # TODO: multiple mutation
 # TODO: try different distance function
-# TODO: try 3-opt with three loops
 class r0701014:
 
     def __init__(self) -> None:
@@ -196,10 +221,10 @@ class r0701014:
             # mutated_population = self.local_search(mutated_population)
             mutated_population = self.local_search_parallel(mutated_population)
 
-            # population, scores = self.fitness_sharing_elimination(mutated_population)
+            population, scores = self.fitness_sharing_elimination(mutated_population)
 
-            population, scores = self.elimination(mutated_population)
-            population, scores = self.eliminate_duplicate_individuals(population, scores)
+            # population, scores = self.elimination(mutated_population)
+            # population, scores = self.eliminate_duplicate_individuals(population, scores)
             population, scores = self.elitism(population, scores)
 
             self.update_scores(population[0], scores)
@@ -391,9 +416,9 @@ class r0701014:
     def pmx(self, individuals):
         """
         Perform partially mapped crossover (PMX) on the parents. This chooses two crossover points at random and copies
-        the subtour between these points to each of the children. The rest of the nodes are then mapped according to the
-        structure of both parents to guarantee no duplicate nodes. This algorithm is described in the book of Eiben and
-        Smith.
+        the partial tour between these points to each of the children. The rest of the nodes are then mapped according
+        to the structure of both parents to guarantee no duplicate nodes. This algorithm is described in the book of
+        Eiben and Smith.
         :param individuals: The two parents to apply the crossover on
         :return: The two children created from the parents.
         """
@@ -685,15 +710,25 @@ class r0701014:
         :param penalties: The penalties that already exist due to other individuals.
         :return: The list with the penalties
         """
-        for i, individual in enumerate(population):
-            distance = self.distance_function(individual_to_compute_distance_from, individual)
-            if distance <= self.sigma:
-                penalties[i] += 1 - distance / self.sigma
-        return penalties
+        distance_function_parallel_partial = partial(distance_function_parallel, perm1=individual_to_compute_distance_from)
+        with Pool(processes=2) as pool:
+            result = pool.map(distance_function_parallel_partial, population)
+
+        result = result / -self.sigma
+        result += 1
+        result[result < 0] = 0
+        # for i, individual in enumerate(population):
+        #
+        #     distance = self.distance_function(individual_to_compute_distance_from, individual)
+        #
+        #     if distance <= self.sigma:
+        #         penalties[i] += 1 - distance / self.sigma
+        # print(penalties)
+        return penalties + result
 
     def distance_function(self, perm1: np.array, perm2: np.array) -> float:
         """
-        Computes the distance between two permutations by counting the edges of the first permuatation that are not in
+        Computes the distance between two permutations by counting the edges of the first permutation that are not in
         the second permutation.
         :param perm1: The first permutation
         :param perm2: The second permutation
@@ -728,8 +763,8 @@ class r0701014:
         sorted_population = joined_population[perm]
         sorted_objective_values = objective_values[perm]
         new_population[0] = sorted_population[0]
-        for i in range(1, self.population_size, 1):
-            if sorted_objective_values[i - 1] == sorted_objective_values[i]:
+        for i in range(self.population_size - 1, 0, -1):
+            if sorted_objective_values[i] == sorted_objective_values[i - 1]:
                 new_population[i] = self.greedy_randomized_algorithm()
             else:
                 new_population[i] = sorted_population[i]
@@ -760,6 +795,7 @@ class r0701014:
             rest = population[random_numbers <= 0.5]
             with Pool(processes=2) as pool:
                 result = pool.map(parallel_3_opt, population_to_search)
+
             return np.vstack([result, rest])
 
     def local_search(self, population: np.array) -> np.array:
@@ -984,8 +1020,10 @@ class r0701014:
         the optimized 3 opt local search operator.
         """
         self.raw_nearest_neighbors = RawArray(ctypes.c_long, self.tour_size * self.number_of_nearest_neighbors)
-        self.nearest_neighbors = np.frombuffer(self.raw_nearest_neighbors, dtype=np.int)\
+        self.nearest_neighbors = np.frombuffer(self.raw_nearest_neighbors, dtype=np.int) \
             .reshape(self.tour_size, self.number_of_nearest_neighbors)
+        for i in range(self.tour_size):
+            self.nearest_neighbors[i] = np.argsort(self.distance_matrix[i])[1:self.number_of_nearest_neighbors + 1]
 
     def init_dictionary(self) -> None:
         var_dict['distance_matrix'] = self.raw_distance_matrix
@@ -997,4 +1035,4 @@ class r0701014:
 TSP = r0701014()
 # TSP.tour_size = 29
 # TSP.naive_3_opt([1, 2, 3, 4, 5])
-TSP.optimize('tour929.csv')
+TSP.optimize('tour29.csv')
