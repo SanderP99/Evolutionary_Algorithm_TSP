@@ -216,13 +216,12 @@ class r0701014:
 
         while not self.is_converged():
             offspring = self.recombination(population)
-
             mutated_population = self.mutation(population, offspring)
 
             # mutated_population = self.local_search(mutated_population)
-            mutated_population = self.local_search_parallel(mutated_population)
+            optimized_population = self.local_search_parallel(mutated_population)
 
-            population, scores = self.fitness_sharing_elimination(mutated_population)
+            population, scores = self.fitness_sharing_elimination(optimized_population)
 
             # population, scores = self.elimination(mutated_population)
             # population, scores = self.eliminate_duplicate_individuals(population, scores)
