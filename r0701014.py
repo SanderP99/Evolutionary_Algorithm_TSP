@@ -1,5 +1,4 @@
 import ctypes
-
 import Reporter
 import numpy as np
 from multiprocessing import RawArray, Pool
@@ -7,43 +6,39 @@ from multiprocessing import RawArray, Pool
 var_dict = {}
 
 
-def parallel_3_opt(i):
-    if i == 0:
-        population = np.frombuffer(var_dict['first_individuals'], dtype=np.int).reshape(
-            int(var_dict['individuals_size'] / 2),
-            var_dict['tour_size'])
-    else:
-        population = np.frombuffer(var_dict['last_individuals'], dtype=np.int).reshape(
-            int(var_dict['individuals_size'] / 2),
-            var_dict['tour_size'])
+def parallel_3_opt(individual):
+    # if i == 0:
+    #     population = np.frombuffer(var_dict['first_individuals'], dtype=np.int).reshape(
+    #         int(var_dict['individuals_size'] / 2),
+    #         var_dict['tour_size'])
+    # else:
+    #     population = np.frombuffer(var_dict['last_individuals'], dtype=np.int).reshape(
+    #         int(var_dict['individuals_size'] / 2),
+    #         var_dict['tour_size'])
 
     tour_size = var_dict['tour_size']
     nearest_neighbors = np.frombuffer(var_dict['nearest_neighbors'], dtype=np.int).reshape(tour_size, 15)
+
+    individual = np.roll(individual, -np.random.randint(tour_size))
+
+    for point1 in range(tour_size):
+        v1 = individual[0]
+        v2 = individual[point1 - 1]
+        v3 = individual[point1]
+        v6 = individual[-1]
+
+        for i, neighbor in enumerate(nearest_neighbors[v2]):
+            point2 = np.where(individual == neighbor)[0][0]
+            v4 = individual[point2 - 1]
+            v5 = individual[point2]
+            if point2 > point1:
+                individual = check_for_3_opt_move(individual, point1, point2, v1, v2, v3, v4, v5, v6)
+    return individual
+
+
+def check_for_3_opt_move(individual, point1, point2, v1, v2, v3, v4, v5, v6):
+    tour_size = var_dict['tour_size']
     distance_matrix = np.frombuffer(var_dict['distance_matrix'], dtype=np.float64).reshape(tour_size, tour_size)
-
-    for i, individual in enumerate(population):
-        individual = np.roll(individual, -np.random.randint(tour_size))
-
-
-        for point1 in range(tour_size):
-            v1 = individual[0]
-            v2 = individual[point1 - 1]
-            v3 = individual[point1]
-            v6 = individual[-1]
-
-            for i, neighbor in enumerate(nearest_neighbors[v2]):
-                point2 = np.where(individual == neighbor)[0][0]
-                v4 = individual[point2 - 1]
-                v5 = individual[point2]
-                if point2 > point1:
-                    individual = check_for_3_opt_move(individual, point1, point2, v1, v2, v3, v4, v5, v6,
-                                                      distance_matrix)
-        population[i] = individual
-
-    return population
-
-
-def check_for_3_opt_move(individual, point1, point2, v1, v2, v3, v4, v5, v6, distance_matrix):
     old_distance = distance_matrix[v2][v3] + distance_matrix[v4][v5] + distance_matrix[v6][v1]
     new_distance = distance_matrix[v2][v5] + distance_matrix[v6][v3] + distance_matrix[v4][v1]
     if new_distance < old_distance:
@@ -144,7 +139,7 @@ class r0701014:
 
         # EA options
         self.use_random_initialization: bool = False  # Use a random initialization instead of heuristic methods
-        self.local_search_on_all: bool = False  # Perform local search on the entire population
+        self.local_search_on_all: bool = True  # Perform local search on the entire population
 
         # EA functions
         self.selection_function = self.selection_roulette_wheel  # Selection function to use
@@ -192,8 +187,8 @@ class r0701014:
 
             mutated_population = self.mutation(population, offspring)
 
-            # mutated_population = self.local_search(mutated_population)
-            mutated_population = self.local_search_parallel(mutated_population)
+            mutated_population = self.local_search(mutated_population)
+            # mutated_population = self.local_search_parallel(mutated_population)
 
             # population, scores = self.fitness_sharing_elimination(mutated_population)
 
@@ -716,9 +711,10 @@ class r0701014:
         np.copyto(first_half, population[:n])
         np.copyto(last_half, population[n:])
         with Pool(processes=2) as pool:
-            result = pool.map(parallel_3_opt, range(2))
+            result = pool.map(parallel_3_opt, population)
 
-        return np.concatenate(result)
+        return np.vstack(result)
+        return np.concatenate([first_half, last_half])
 
     def local_search(self, population):
         if self.local_search_on_all:
