@@ -3,10 +3,18 @@ import Reporter
 import numpy as np
 from multiprocessing import RawArray, Pool
 
+# Dictionary to store the location of the arrays used by the parallel processes
 var_dict = {}
 
 
-def parallel_3_opt(individual):
+def parallel_3_opt(individual: np.array) -> np.array:
+    """
+    This function performs local search on the individual. It can be performed in parallel by using the RawArrays from
+    the multiprocessing library. This array cannot be locked. The location of the array can be accessed from the global
+    dictionary var_dict.
+    :param individual: The individual to perform local search on.
+    :return: The (improved) individual
+    """
     tour_size = var_dict['tour_size']
     nearest_neighbors = np.frombuffer(var_dict['nearest_neighbors'], dtype=np.int).reshape(tour_size, 15)
 
@@ -688,7 +696,14 @@ class r0701014:
     #  LOCAL SEARCH OPERATORS  #
     ############################
 
-    def local_search_parallel(self, population) -> np.array:
+    def local_search_parallel(self, population: np.array) -> np.array:
+        """
+        This method performs local search on the population in a parallel way by using the multiprocessing library. The
+        distance matrix is stored in a RawArray to make sure no locks can be applied and all child processes can use the
+        matrix without needed to pickle it (used in Queues and Pipes).
+        :param population: The population to perform local search on.
+        :return: The (improved) population
+        """
         if self.local_search_on_all:
             with Pool(processes=2) as pool:
                 result = pool.map(parallel_3_opt, population)
@@ -702,7 +717,12 @@ class r0701014:
                 result = pool.map(parallel_3_opt, population_to_search)
             return np.vstack([result, rest])
 
-    def local_search(self, population):
+    def local_search(self, population: np.array) -> np.array:
+        """
+        This method performs local search on the population in a sequential way.
+        :param population: The population to perform local search on.
+        :return: The (improved) population
+        """
         if self.local_search_on_all:
             for i, individual in enumerate(population):
                 population[i] = self.local_search_operator(individual)
@@ -722,7 +742,7 @@ class r0701014:
         through the individual once. But therefore it will not create very good solutions because it can only look at
         four nodes at a time.
         :param individual: The individual to perform the local search on.
-        :return:
+        :return: The (improved) individual
         """
         for i in range(self.tour_size):
             a = individual[i - 1]
