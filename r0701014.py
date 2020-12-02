@@ -35,7 +35,21 @@ def parallel_3_opt(individual: np.array) -> np.array:
     return individual
 
 
-def check_for_3_opt_move(individual, point1, point2, v1, v2, v3, v4, v5, v6):
+def check_for_3_opt_move(individual: np.array, point1: int, point2: int, v1: int, v2: int, v3: int, v4: int, v5: int,
+                         v6: int):
+    """
+    This function checks for a possible 3 opt move for the arcs between endpoints v1-v2, v3-v4 and v5-v6.
+    :param individual: The individual to try the 3 opt move on
+    :param point1: The first crossing point, the point between v2 and v3
+    :param point2: The second crossing point, the point between v4 and v5
+    :param v1: The beginning of the first arc
+    :param v2: The ending of the first arc
+    :param v3: The beginning of the second arc
+    :param v4: The ending of the second arc
+    :param v5: The beginning of the third arc
+    :param v6: The ending of the third arc
+    :return: The individual with the 3 opt move applied (if it is better than not)
+    """
     tour_size = var_dict['tour_size']
     distance_matrix = np.frombuffer(var_dict['distance_matrix'], dtype=np.float64).reshape(tour_size, tour_size)
     old_distance = distance_matrix[v2][v3] + distance_matrix[v4][v5] + distance_matrix[v6][v1]
@@ -730,7 +744,8 @@ class r0701014:
         """
         This method performs local search on the population in a parallel way by using the multiprocessing library. The
         distance matrix is stored in a RawArray to make sure no locks can be applied and all child processes can use the
-        matrix without needed to pickle it (used in Queues and Pipes).
+        matrix without needed to pickle it (used in Queues and Pipes). In self.local_search_on_all is specified if the
+        operator should be applied on all individuals or on 50% of them.
         :param population: The population to perform local search on.
         :return: The (improved) population
         """
@@ -805,7 +820,9 @@ class r0701014:
             v3 = individual[point1]
             v6 = individual[-1]
             for point2 in range(point1 + 1, self.tour_size):
-                individual = self.check_for_3_opt_move(individual, point1, point2, v1, v2, v3, v6)
+                v4 = individual[point2 - 1]
+                v5 = individual[point2]
+                individual = self.check_for_3_opt_move(individual, point1, point2, v1, v2, v3, v4, v5, v6)
         return individual
 
     def local_search_optimized_3_opt(self, individual: np.array) -> np.array:
@@ -903,8 +920,8 @@ class r0701014:
 
     def update_scores(self, individual: np.array, scores: np.array) -> None:
         """
-        Updates the best and mean objective value according to the new population. Also sets the new best solution in the
-        population. The number of the generation is also updated.
+        Updates the best and mean objective value according to the new population. Also sets the new best solution in
+        the population. The number of the generation is also updated.
         :param individual: The best individual from the entire population
         :param scores: The scores from all the individuals in the population, ordered in ascending order.
         """
@@ -967,8 +984,9 @@ class r0701014:
         the optimized 3 opt local search operator.
         """
         self.raw_nearest_neighbors = RawArray(ctypes.c_long, self.tour_size * self.number_of_nearest_neighbors)
-        self.nearest_neighbors = np.frombuffer(self.raw_nearest_neighbors, dtype=np.int).reshape(self.tour_size,
-                                                                                                 self.number_of_nearest_neighbors)
+        self.nearest_neighbors = np.frombuffer(self.raw_nearest_neighbors, dtype=np.int)\
+            .reshape(self.tour_size, self.number_of_nearest_neighbors)
+
     def init_dictionary(self) -> None:
         var_dict['distance_matrix'] = self.raw_distance_matrix
         var_dict['nearest_neighbors'] = self.raw_nearest_neighbors
