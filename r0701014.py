@@ -1,5 +1,51 @@
+import ctypes
 import Reporter
 import numpy as np
+from multiprocessing import RawArray, Pool
+
+# Dictionary to store the location of the arrays used by the parallel processes
+var_dict = {}
+
+
+def parallel_3_opt(individual: np.array) -> np.array:
+    """
+    This function performs local search on the individual. It can be performed in parallel by using the RawArrays from
+    the multiprocessing library. This array cannot be locked. The location of the array can be accessed from the global
+    dictionary var_dict.
+    :param individual: The individual to perform local search on.
+    :return: The (improved) individual
+    """
+    tour_size = var_dict['tour_size']
+    nearest_neighbors = np.frombuffer(var_dict['nearest_neighbors'], dtype=np.int).reshape(tour_size, 15)
+
+    individual = np.roll(individual, -np.random.randint(tour_size))
+
+    for point1 in range(tour_size):
+        v1 = individual[0]
+        v2 = individual[point1 - 1]
+        v3 = individual[point1]
+        v6 = individual[-1]
+
+        for i, neighbor in enumerate(nearest_neighbors[v2]):
+            point2 = np.where(individual == neighbor)[0][0]
+            v4 = individual[point2 - 1]
+            v5 = individual[point2]
+            if point2 > point1:
+                individual = check_for_3_opt_move(individual, point1, point2, v1, v2, v3, v4, v5, v6)
+    return individual
+
+
+def check_for_3_opt_move(individual, point1, point2, v1, v2, v3, v4, v5, v6):
+    tour_size = var_dict['tour_size']
+    distance_matrix = np.frombuffer(var_dict['distance_matrix'], dtype=np.float64).reshape(tour_size, tour_size)
+    old_distance = distance_matrix[v2][v3] + distance_matrix[v4][v5] + distance_matrix[v6][v1]
+    new_distance = distance_matrix[v2][v5] + distance_matrix[v6][v3] + distance_matrix[v4][v1]
+    if new_distance < old_distance:
+        a = individual[:point1]
+        b = individual[point1:point2]
+        c = individual[point2:]
+        individual = np.concatenate([a, c, b])
+    return individual
 
 
 def alias_setup(probabilities):
@@ -77,12 +123,16 @@ class r0701014:
         self.population_size: int = 16  # Number of individuals in population
         self.offspring_size: int = 60  # Number of children created per generation
         self.k: int = 3  # The k used in k-tournament selection
-        self.selection_pressure = 0  # The selection pressure used
+        self.selection_pressure: float = 0  # The selection pressure used
         self.selection_pressure_decay = 0  # The factor for the decay of the selection pressure in geometric decay
-        self.alpha = 0.15  # The mutation rate
-        self.rcl = 0.1  # Fraction that a solution can be longer than the greedy solution
-        self.number_of_nearest_neighbors = 15  # Number of NN used in the 3 opt local search
-        self.sigma = 0  # Sigma used in the fitness sharing
+        self.alpha: float = 0.15  # The mutation rate
+        self.rcl: float = 0.1  # Fraction that a solution can be longer than the greedy solution
+        self.number_of_nearest_neighbors: int = 15  # Number of NN used in the 3 opt local search
+        self.sigma: int = 0  # Sigma used in the fitness sharing
+
+        # Arrays for parallel execution
+        self.raw_distance_matrix = None
+        self.raw_nearest_neighbors = None
 
         # EA options
         self.use_random_initialization: bool = False  # Use a random initialization instead of heuristic methods
@@ -100,8 +150,8 @@ class r0701014:
         self.best_objective: float = np.inf  # Best objective value of the current generation
         self.best_solution: np.array = None  # Best solution of the current generation
         self.last_mean_objective: float = 0  # Mean objective value of the previous generation
-        self.last_best_objective = 0  # Best objective value of the previous generation
-        self.same_best_objective = 0  # Streak where last best objective == current best objective
+        self.last_best_objective: float = 0  # Best objective value of the previous generation
+        self.same_best_objective: int = 0  # Streak where last best objective == current best objective
 
         self.set_selection_pressure()  # Depending on the selection function, the selection pressure will be different
 
@@ -111,10 +161,16 @@ class r0701014:
         :param filename: The filename of the tour for which a candidate solution needs to be found.
         """
         # Read the distance matrix from file
-        self.distance_matrix = np.loadtxt(filename, delimiter=",")
-        self.tour_size = self.distance_matrix.shape[0]
+        data = np.loadtxt(filename, delimiter=",")
+        self.tour_size = data.shape[0]
+        self.raw_distance_matrix = RawArray(ctypes.c_double, self.tour_size * self.tour_size)
+        self.distance_matrix = np.frombuffer(self.raw_distance_matrix, dtype=np.float64).reshape(self.tour_size,
+                                                                                                 self.tour_size)
+        np.copyto(self.distance_matrix, data)
+
         self.sigma = np.floor(0.05 * self.tour_size)
         self.build_nearest_neighbor_list()
+        self.init_dictionary()
 
         population = self.initialize_population()
 
@@ -123,12 +179,13 @@ class r0701014:
 
             mutated_population = self.mutation(population, offspring)
 
-            mutated_population = self.local_search(mutated_population)
+            # mutated_population = self.local_search(mutated_population)
+            mutated_population = self.local_search_parallel(mutated_population)
 
-            population, scores = self.fitness_sharing_elimination(mutated_population)
+            # population, scores = self.fitness_sharing_elimination(mutated_population)
 
-            # population, scores = self.elimination(mutated_population)
-            # population, scores = self.eliminate_duplicate_individuals(population, scores)
+            population, scores = self.elimination(mutated_population)
+            population, scores = self.eliminate_duplicate_individuals(population, scores)
             population, scores = self.elitism(population, scores)
 
             self.update_scores(population[0], scores)
@@ -669,6 +726,27 @@ class r0701014:
     #  LOCAL SEARCH OPERATORS  #
     ############################
 
+    def local_search_parallel(self, population: np.array) -> np.array:
+        """
+        This method performs local search on the population in a parallel way by using the multiprocessing library. The
+        distance matrix is stored in a RawArray to make sure no locks can be applied and all child processes can use the
+        matrix without needed to pickle it (used in Queues and Pipes).
+        :param population: The population to perform local search on.
+        :return: The (improved) population
+        """
+        if self.local_search_on_all:
+            with Pool(processes=2) as pool:
+                result = pool.map(parallel_3_opt, population)
+            return np.vstack(result)
+        else:
+            random_numbers = np.random.random(population.shape[0])
+            random_numbers[0] = 1  # Always perform local search on the fittest individual
+            population_to_search = population[random_numbers > 0.5]
+            rest = population[random_numbers <= 0.5]
+            with Pool(processes=2) as pool:
+                result = pool.map(parallel_3_opt, population_to_search)
+            return np.vstack([result, rest])
+
     def local_search(self, population: np.array) -> np.array:
         """
         Performs local search on the population. The local search operator to use is specified in
@@ -696,7 +774,7 @@ class r0701014:
         through the individual once. But therefore it will not create very good solutions because it can only look at
         four nodes at a time.
         :param individual: The individual to perform the local search on.
-        :return:
+        :return: The (improved) individual
         """
         for i in range(self.tour_size):
             a = individual[i - 1]
@@ -883,17 +961,22 @@ class r0701014:
                 candidates.append(x)
         return np.array(candidates)
 
-    def build_nearest_neighbor_list(self) -> None:
+    def build_nearest_neighbor_list(self):
         """
         This function creates the list of the nearest neighbors for all nodes in the tour. This list is then used in
         the optimized 3 opt local search operator.
         """
-        self.nearest_neighbors = np.empty([self.tour_size, self.number_of_nearest_neighbors], dtype=np.int)
-        for i in range(self.tour_size):
-            self.nearest_neighbors[i] = np.argsort(self.distance_matrix[i])[1:self.number_of_nearest_neighbors + 1]
+        self.raw_nearest_neighbors = RawArray(ctypes.c_long, self.tour_size * self.number_of_nearest_neighbors)
+        self.nearest_neighbors = np.frombuffer(self.raw_nearest_neighbors, dtype=np.int).reshape(self.tour_size,
+                                                                                                 self.number_of_nearest_neighbors)
+    def init_dictionary(self) -> None:
+        var_dict['distance_matrix'] = self.raw_distance_matrix
+        var_dict['nearest_neighbors'] = self.raw_nearest_neighbors
+        var_dict['tour_size'] = self.tour_size
+        var_dict['individuals_size'] = self.population_size + self.offspring_size
 
 
 TSP = r0701014()
 # TSP.tour_size = 29
 # TSP.naive_3_opt([1, 2, 3, 4, 5])
-TSP.optimize('tour194.csv')
+TSP.optimize('tour929.csv')
