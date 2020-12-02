@@ -32,6 +32,7 @@ def distance_function_parallel(perm2: np.array, perm1: np.array) -> float:
 
     return distance
 
+
 def parallel_3_opt(individual: np.array) -> np.array:
     """
     This function performs local search on the individual. It can be performed in parallel by using the RawArrays from
@@ -703,27 +704,22 @@ class r0701014:
     def compute_penalties(self, individual_to_compute_distance_from, population, penalties) -> np.array:
         """
         This function computes the penalties introduced by an individual already in the next generation on the
-        remaining individuals.
+        remaining individuals in parallel.
         :param individual_to_compute_distance_from: The individual that introduces the penalty on the rest of the
         population
         :param population: The population to add the penalties to
         :param penalties: The penalties that already exist due to other individuals.
         :return: The list with the penalties
         """
-        distance_function_parallel_partial = partial(distance_function_parallel, perm1=individual_to_compute_distance_from)
+        distance_function_parallel_partial = partial(distance_function_parallel,
+                                                     perm1=individual_to_compute_distance_from)
         with Pool(processes=2) as pool:
             result = pool.map(distance_function_parallel_partial, population)
 
         result = result / -self.sigma
         result += 1
         result[result < 0] = 0
-        # for i, individual in enumerate(population):
-        #
-        #     distance = self.distance_function(individual_to_compute_distance_from, individual)
-        #
-        #     if distance <= self.sigma:
-        #         penalties[i] += 1 - distance / self.sigma
-        # print(penalties)
+
         return penalties + result
 
     def distance_function(self, perm1: np.array, perm2: np.array) -> float:
