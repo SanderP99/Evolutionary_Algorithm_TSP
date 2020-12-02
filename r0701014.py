@@ -7,15 +7,6 @@ var_dict = {}
 
 
 def parallel_3_opt(individual):
-    # if i == 0:
-    #     population = np.frombuffer(var_dict['first_individuals'], dtype=np.int).reshape(
-    #         int(var_dict['individuals_size'] / 2),
-    #         var_dict['tour_size'])
-    # else:
-    #     population = np.frombuffer(var_dict['last_individuals'], dtype=np.int).reshape(
-    #         int(var_dict['individuals_size'] / 2),
-    #         var_dict['tour_size'])
-
     tour_size = var_dict['tour_size']
     nearest_neighbors = np.frombuffer(var_dict['nearest_neighbors'], dtype=np.int).reshape(tour_size, 15)
 
@@ -133,13 +124,11 @@ class r0701014:
 
         # Arrays for parallel execution
         self.raw_distance_matrix = None
-        self.raw_first_individuals = None
-        self.raw_last_individuals = None
         self.raw_nearest_neighbors = None
 
         # EA options
         self.use_random_initialization: bool = False  # Use a random initialization instead of heuristic methods
-        self.local_search_on_all: bool = True  # Perform local search on the entire population
+        self.local_search_on_all: bool = False  # Perform local search on the entire population
 
         # EA functions
         self.selection_function = self.selection_roulette_wheel  # Selection function to use
@@ -171,11 +160,6 @@ class r0701014:
                                                                                                  self.tour_size)
         np.copyto(self.distance_matrix, data)
 
-        self.raw_first_individuals = RawArray(ctypes.c_long,
-                                              int((self.population_size + self.offspring_size) / 2) * self.tour_size)
-        self.raw_last_individuals = RawArray(ctypes.c_long,
-                                             int((self.population_size + self.offspring_size) / 2) * self.tour_size)
-
         self.sigma = np.floor(0.05 * self.tour_size)
         self.build_nearest_neighbor_list()
         self.init_dictionary()
@@ -187,8 +171,8 @@ class r0701014:
 
             mutated_population = self.mutation(population, offspring)
 
-            mutated_population = self.local_search(mutated_population)
-            # mutated_population = self.local_search_parallel(mutated_population)
+            # mutated_population = self.local_search(mutated_population)
+            mutated_population = self.local_search_parallel(mutated_population)
 
             # population, scores = self.fitness_sharing_elimination(mutated_population)
 
@@ -704,17 +688,19 @@ class r0701014:
     #  LOCAL SEARCH OPERATORS  #
     ############################
 
-    def local_search_parallel(self, population):
-        n = int((self.population_size + self.offspring_size) / 2)
-        first_half = np.frombuffer(self.raw_first_individuals, dtype=np.int).reshape(n, self.tour_size)
-        last_half = np.frombuffer(self.raw_last_individuals, dtype=np.int).reshape(n, self.tour_size)
-        np.copyto(first_half, population[:n])
-        np.copyto(last_half, population[n:])
-        with Pool(processes=2) as pool:
-            result = pool.map(parallel_3_opt, population)
-
-        return np.vstack(result)
-        return np.concatenate([first_half, last_half])
+    def local_search_parallel(self, population) -> np.array:
+        if self.local_search_on_all:
+            with Pool(processes=2) as pool:
+                result = pool.map(parallel_3_opt, population)
+            return np.vstack(result)
+        else:
+            random_numbers = np.random.random(population.shape[0])
+            random_numbers[0] = 1  # Always perform local search on the fittest individual
+            population_to_search = population[random_numbers > 0.5]
+            rest = population[random_numbers <= 0.5]
+            with Pool(processes=2) as pool:
+                result = pool.map(parallel_3_opt, population_to_search)
+            return np.vstack([result, rest])
 
     def local_search(self, population):
         if self.local_search_on_all:
@@ -924,8 +910,6 @@ class r0701014:
     def init_dictionary(self) -> None:
         var_dict['distance_matrix'] = self.raw_distance_matrix
         var_dict['nearest_neighbors'] = self.raw_nearest_neighbors
-        var_dict['first_individuals'] = self.raw_first_individuals
-        var_dict['last_individuals'] = self.raw_last_individuals
         var_dict['tour_size'] = self.tour_size
         var_dict['individuals_size'] = self.population_size + self.offspring_size
 
