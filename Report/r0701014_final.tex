@@ -16,6 +16,7 @@
 \usepackage{cleveref}
 \usepackage{graphicx}
 \usepackage[nottoc]{tocbibind}
+\usepackage{url}
 
 \newcommand{\nextyear}{\advance\year by 1 \the\year\advance\year by -1}
 \newcommand{\thisyear}{\the\year}
@@ -99,19 +100,29 @@ An individual is represented as a 1D \pyth{numpy} array with the order of the vi
 
 \ReplaceMe{How do you initialize the population? How did you determine the number of individuals? Did you implement advanced initialization mechanisms (local search operators, heuristic solutions)? If so, describe them. Do you believe your approach maintains sufficient diversity? How do you ensure that your population enrichment scheme does not immediately take over the population? Did you implement other initialization schemes that did not make it to the final version? Why did you discard them? How did you determine the population size?}
 
-The population is initialized by using a a greedy algorithm. The algorithm starts in a node and picks the nearest not visited node as the next node. The starting points are decided at random. This is a variation on all nearest neighbors (ANN) as proposed by Kaabi and Harrath \cite{ann}. This heuristic method creates less diversity than random initialization. Therefore a diversity promotion scheme is implemented and described in section \ref{sec:diversity}. The random initialization method is still available by setting the boolean value of \texttt{use\_random\_initialization} to true. This version explores more of the search space, but it will never reach the heuristic solution for the bigger problems in the given time span.
+The population is initialized by using a greedy algorithm. The algorithm starts in a node and picks the nearest not visited node as the next node. The starting points are decided at random. This is a variation on all nearest neighbors (ANN) as proposed by Kaabi and Harrath \cite{ann}. This heuristic method creates less diversity than random initialization. Therefore a diversity promotion scheme is implemented and described in section \ref{sec:diversity}. The random initialization method is still available by setting the boolean value of \texttt{use\_random\_initialization} to true. This version explores more of the search space, but it will never reach the heuristic solution for the bigger problems in the given time span.
 
 \subsection{Selection operators}
 
 \ReplaceMe{Which selection operators did you implement? If they are not from the slides, describe them. Can you motivate why you chose this one? Are there parameters that need to be chosen? Did you use an advanced scheme to vary these parameters throughout the iterations? Did you try other selection operators not included in the final version? Why did you discard them?}
 
+The following selection operators were implemented: k-tournament selection, linear rank based selection and roulette wheel selection with geometric decaying selection pressure. Some of these selection operators depend on parameters chosen by the user. For k-tournament this parameter is $k$, the number of individuals to be randomly selected for the tournament. The roulette wheel selection depends on the starting selection pressure and the decay for this selection pressure. The linear rank based selection does not need any parameters to be chosen.\\
+The final version of the evolutionary algorithm uses the roulette wheel selection with geometric decay. By doing a hyperparameter search, as described in section \ref{sec:hyperparameter}, the values of the starting selection pressure and the decay are set to \ReplaceMe{x and y} respectively. The generation of individuals in this operator is not done using inverse transform sampling, as this would require $\mathcal{O}(n)$ time per sample. Instead the Vose's alias method is used as explained by Schwarz \cite{schwarz, vose}. This method is able to sample in constant time, but uses $\mathcal{O}(n)$ time to initialize. This initialization can be reused to select all the individuals during the current generation.\\
+A fitness proportionate selection scheme was briefly introduced but discarded due to the problems mentioned in the slides.
+
 \subsection{Mutation operators}
 
 \ReplaceMe{Which mutation operators did you implement? If they are not from the slides, describe them. How do you choose among several mutation operators? Do you believe it will introduce sufficient randomness? Can that be controlled with parameters? Do you use self-adaptivity? Do you use any other advanced parameter control mechanisms (e.g., variable across iterations)? Did you try other mutation operators not included in the final version? Why did you discard them?}
 
+The mutation operator that existed in the group phase, the sequence swap operator, was simplified to a simple swap operator that swaps two nodes at random. This operator had little effect on larger problem instances due to its proportionally small range. Therefore three different operators were introduced: reverse sequence mutation (RSM), partial shuffle mutation (PSM) and a hybrid of the two called hybridizing PSM RSM mutation (HPRM) \cite{hprm}.\\
+RSM chooses two nodes in the individual at random and reverses the sequence between the two nodes. PSM is similar but randomly shuffles the sequence between the nodes, thus introducing more randomness. HPRM is a combination of the two where the sequence between the nodes is reversed element-wise and shuffled after each reversion.\\
+All the operators discussed cannot be controlled by a parameter to tune the amount of randomness they introduce. The final evolutioanry algorithm uses \ReplaceMe{x} because it proved the best in the numerical experiments. The operator is applied with a probability $\alpha$ to an individual, with $\alpha = 0.2 *\frac{ \textit{mean objective}}{\textit{mean objective } + \textit{ best objective}}$. This idea is based on the idea from Kaabi and Harrath \cite{ann}. 
+
 \subsection{Recombination operators}
 
 \ReplaceMe{Which recombination operators did you implement? If they are not from the slides, describe them. How do you choose among several recombination operators? Why did you choose these ones specifically? Explain how you believe that these operators can produce offspring that combine the best features from their parents. How does your operator behave if there is little overlap between the parents? Can your recombination be controlled with parameters; what behavior do they change? Do you use self-adaptivity? Do you use any other advanced parameter control mechanisms (e.g., variable across iterations)? Did you try other recombination operators not included in the final version? Why did you discard them? Did you consider recombination with arity strictly greater than 2?}
+
+
 
 \subsection{Elimination operators}
 
@@ -129,11 +140,13 @@ The population is initialized by using a a greedy algorithm. The algorithm start
 
 \ReplaceMe{Which stopping criterion did you implement? Did you combine several criteria?}
 
+During the development phase, a combination of two criteria was used. The first one was a limit on the number of generations (500 in this case) and the second one was the number of generations in which the best solutions had not changed. The former criterion was obsolete after for the larger problems due to the computationally expensive local search operator. Since the elitism scheme was used in the final version of the algorithm, the stopping criterion has been dropped in order to fully use the given time span.
+
 \subsection{The main loop}
 
 \ReplaceMe{Describe the main loop of your evolutionary algorithm using a clear picture (preferred) or high-level pseudocode. In what order do you apply the various operators? Why that order? If you are using several selection, mutation, recombination, elimination, and local search operators, describe how you choose among the possibilities. Are you selecting/eliminating all individuals in parallel, or one by one? With or without replacement?}
 
-\subsection{Parameter selection}
+\subsection{Parameter selection} \label{sec:hyperparameter}
 
 \ReplaceMe{For all of the parameters that are not automatically determined by adaptivity or self-adaptivity (as you have described above), describe how you determined them. Did you perform a hyperparameter search? How did you do this? How did you determine these parameters would be valid both for small and large problem instances?}
 

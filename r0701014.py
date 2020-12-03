@@ -146,10 +146,6 @@ def alias_draw(j, q):
         return j[kk]
 
 
-# TODO: multiple crossovers
-# TODO: Edge crossover
-# TODO: multiple mutation
-# TODO: try different distance function
 class r0701014:
 
     def __init__(self) -> None:
@@ -157,7 +153,7 @@ class r0701014:
         self.distance_matrix: np.array = None  # Distance matrix
         self.tour_size: int = 0  # Number of cities in a tour
         self.generation: int = 0  # Current generation
-        self.nearest_neighbors = None
+        self.nearest_neighbors = None  # List with the nearest neighbors for each node, used in the 3-opt local search
 
         # EA parameters
         self.population_size: int = 16  # Number of individuals in population
@@ -168,15 +164,16 @@ class r0701014:
         self.alpha: float = 0.15  # The mutation rate
         self.rcl: float = 0.1  # Fraction that a solution can be longer than the greedy solution
         self.number_of_nearest_neighbors: int = 15  # Number of NN used in the 3 opt local search
-        self.sigma: int = 0  # Sigma used in the fitness sharing
+        self.sigma: int = 0  # Sigma used in the fitness sharing, will be set after tour_size is known
 
         # Arrays for parallel execution
-        self.raw_distance_matrix = None
-        self.raw_nearest_neighbors = None
+        self.raw_distance_matrix = None  # RawArray to be shared between parallel processes
+        self.raw_nearest_neighbors = None  # RawArray to be shared between parallel processes
 
         # EA options
         self.use_random_initialization: bool = False  # Use a random initialization instead of heuristic methods
         self.local_search_on_all: bool = False  # Perform local search on the entire population
+        self.use_multiple_mutation_operators: bool = False  # Combine different mutation operators
 
         # EA functions
         self.selection_function = self.selection_roulette_wheel  # Selection function to use
@@ -556,8 +553,17 @@ class r0701014:
         """
         joined_population = np.vstack((population, offspring))
         mask = np.random.random(joined_population.shape[0]) < self.alpha
-        mutated_population = self.mutation_function(joined_population[mask])
-        return np.vstack((joined_population[~mask], mutated_population))
+        if not self.use_multiple_mutation_operators:
+            mutated_population = self.mutation_function(joined_population[mask])
+            return np.vstack((joined_population[~mask], mutated_population))
+        else:
+            probabilities = [0.50, 0.50]  # RSM, PSM, HRPM
+            number_of_individuals = joined_population[mask].shape[0]
+            first = round(number_of_individuals * probabilities[0])
+
+            p1 = self.reverse_sequence_mutation(joined_population[mask][:first])
+            p2 = self.hybridizing_psm_rsm_mutation(joined_population[mask][first:])
+            return np.vstack((joined_population[mask], p1, p2))
 
     def swap(self, population: np.array) -> np.array:
         """
@@ -945,7 +951,7 @@ class r0701014:
         """
         :return: Returns True if the algorithm has converged, False if not.
         """
-        if self.same_best_objective >= 30:
+        if self.same_best_objective >= 20:
             return True
         return False
 
@@ -1028,6 +1034,4 @@ class r0701014:
 
 
 TSP = r0701014()
-# TSP.tour_size = 29
-# TSP.naive_3_opt([1, 2, 3, 4, 5])
 TSP.optimize('tour29.csv')
