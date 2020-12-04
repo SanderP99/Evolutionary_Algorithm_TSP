@@ -1,6 +1,7 @@
 import ctypes
+import itertools
 from functools import partial
-
+import csv
 import Reporter
 import numpy as np
 from multiprocessing import RawArray, Pool
@@ -165,6 +166,7 @@ class r0701014:
         self.rcl: float = 0.1  # Fraction that a solution can be longer than the greedy solution
         self.number_of_nearest_neighbors: int = 15  # Number of NN used in the 3 opt local search
         self.sigma: int = 0  # Sigma used in the fitness sharing, will be set after tour_size is known
+        self.percentage_local_search: float = 0.5  # Percentage of individuals to perform local search on
 
         # Arrays for parallel execution
         self.raw_distance_matrix = None  # RawArray to be shared between parallel processes
@@ -189,6 +191,7 @@ class r0701014:
         self.last_mean_objective: float = 0  # Mean objective value of the previous generation
         self.last_best_objective: float = 0  # Best objective value of the previous generation
         self.same_best_objective: int = 0  # Streak where last best objective == current best objective
+        self.time_left = 300
 
         self.set_selection_pressure()  # Depending on the selection function, the selection pressure will be different
 
@@ -218,13 +221,22 @@ class r0701014:
             # mutated_population = self.local_search(mutated_population)
             optimized_population = self.local_search_parallel(mutated_population)
 
-            population, scores = self.fitness_sharing_elimination(optimized_population)
+            # population, scores = self.fitness_sharing_elimination(optimized_population)
 
-            # population, scores = self.elimination(mutated_population)
-            # population, scores = self.eliminate_duplicate_individuals(population, scores)
+            population, scores = self.elimination(optimized_population)
+            population, scores = self.eliminate_duplicate_individuals(population, scores)
             population, scores = self.elitism(population, scores)
 
             self.update_scores(population[0], scores)
+
+            if self.same_best_objective % 20 == 0 and self.same_best_objective != 0:
+                if self.same_best_objective > 40:
+                    break
+                self.use_random_initialization = True
+                population = self.initialize_population()
+                population[0] = self.best_solution
+
+
             if self.mean_objective != np.inf:
                 self.alpha = 0.2 * self.mean_objective / (self.best_objective + self.mean_objective)
 
@@ -234,6 +246,7 @@ class r0701014:
             #  - a 1D numpy array in the cycle notation containing the best solution
             #    with city numbering starting from 0
             time_left = self.reporter.report(self.mean_objective, self.best_objective, self.best_solution)
+            self.time_left = time_left
             if time_left < 0:
                 break
 
@@ -792,8 +805,8 @@ class r0701014:
         else:
             random_numbers = np.random.random(population.shape[0])
             random_numbers[0] = 1  # Always perform local search on the fittest individual
-            population_to_search = population[random_numbers > 0.5]
-            rest = population[random_numbers <= 0.5]
+            population_to_search = population[random_numbers > self.percentage_local_search]
+            rest = population[random_numbers <= self.percentage_local_search]
             with Pool(processes=2) as pool:
                 result = pool.map(parallel_3_opt, population_to_search)
 
@@ -814,7 +827,7 @@ class r0701014:
             random_numbers = np.random.random(population.shape[0])
             random_numbers[0] = 1  # Always perform local search on the fittest individual
             for i, individual in enumerate(population):
-                if random_numbers[i] > 0.5:
+                if random_numbers[i] > self.percentage_local_search:
                     population[i] = self.local_search_operator(individual)
 
         return population
@@ -951,9 +964,10 @@ class r0701014:
         """
         :return: Returns True if the algorithm has converged, False if not.
         """
-        if self.same_best_objective >= 20:
-            return True
         return False
+        # if self.same_best_objective >= 30:
+        #     return True
+        # return False
 
     def update_scores(self, individual: np.array, scores: np.array) -> None:
         """
@@ -1033,5 +1047,34 @@ class r0701014:
         var_dict['individuals_size'] = self.population_size + self.offspring_size
 
 
-TSP = r0701014()
-TSP.optimize('tour29.csv')
+
+
+with open('mutation_recombination_194.csv', 'w', newline='') as file:
+    writer = csv.writer(file, delimiter=',')
+    writer.writerow(['Generations', 'Time', 'Mean', 'Best', 'Mutation', 'Recombination'])
+
+
+# TSP1 = r0701014()
+
+
+
+for _ in range(10):
+    TSP = r0701014()
+    mutations = [TSP.reverse_sequence_mutation,
+                 TSP.hybridizing_psm_rsm_mutation]
+    recombinations = [TSP.pmx, TSP.order_crossover, TSP.sequential_constructive_crossover]
+    all_combinations = itertools.product(mutations, recombinations)
+    print(all_combinations)
+    for mutation, recombination in all_combinations:
+        TSP.__init__()
+        TSP.mutation_function = mutation
+        TSP.recombination_function = recombination
+        TSP.optimize('tour194.csv')
+
+        with open('mutation_recombination_194.csv', 'a') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow([TSP.generation, TSP.time_left, TSP.mean_objective, TSP.best_objective,
+                             TSP.mutation_function.__name__, TSP.recombination_function.__name__])
+
+
+# TSP.optimize('tour29.csv')

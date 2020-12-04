@@ -25,4 +25,22 @@ Abdoun Otman, Chakir Tajani, and Jaafar Abouchabka.
   Travelling salesman problem.
 \newblock 05 2012.
 
+\bibitem{kanellakispapadimitriou}
+Paris-C. Kanellakis and Christos~H. Papadimitriou.
+\newblock Local search for the asymmetric traveling salesman problem.
+\newblock {\em Operations Research}, 28(5):1086--1099, 1980.
+
+\bibitem{bentley}
+Jon~Louis Bentley.
+\newblock Experiments on traveling salesman heuristics.
+\newblock In {\em Proceedings of the First Annual ACM-SIAM Symposium on
+  Discrete Algorithms}, SODA '90, page 91–99, USA, 1990. Society for
+  Industrial and Applied Mathematics.
+
+\bibitem{nagatasoler}
+Yuichi Nagata and David Soler.
+\newblock A new genetic algorithm for the asymmetric traveling salesman
+  problem, expert systems with applications.
+\newblock {\em Expert Systems with Applications}, 39(10):8947--8953, 2012.
+
 \end{thebibliography}

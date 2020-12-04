@@ -84,7 +84,7 @@ This report should be uploaded to Toledo by \deadlineReport. It must be in the \
 
 \paragraph{Recombination operator:} The recombination operator used in the group phase did not preserve the order of the nodes in the tour, but rather tried to preserve the position of the nodes. Several new recombination operators were created to deal with this problem.
 
-\section{Final design of the evolutionary algorithm} 
+\section{Final design of the evolutionary algorithm}  \label{sec:evolutionary algorithm}
 
 \RemoveMe{\textbf{Goal:} Based on this section, we will evaluate insofar as you are able to design and implement an advanced, effective evolutionary algorithm for solving a model problem.}
 
@@ -110,13 +110,13 @@ The following selection operators were implemented: k-tournament selection, line
 The final version of the evolutionary algorithm uses the roulette wheel selection with geometric decay. By doing a hyperparameter search, as described in section \ref{sec:hyperparameter}, the values of the starting selection pressure and the decay are set to \ReplaceMe{x and y} respectively. The generation of individuals in this operator is not done using inverse transform sampling, as this would require $\mathcal{O}(n)$ time per sample. Instead the Vose's alias method is used as explained by Schwarz \cite{schwarz, vose}. This method is able to sample in constant time, but uses $\mathcal{O}(n)$ time to initialize. This initialization can be reused to select all the individuals during the current generation.\\
 A fitness proportionate selection scheme was briefly introduced but discarded due to the problems mentioned in the slides.
 
-\subsection{Mutation operators}
+\subsection{Mutation operators} \label{sec:mutation}
 
 \ReplaceMe{Which mutation operators did you implement? If they are not from the slides, describe them. How do you choose among several mutation operators? Do you believe it will introduce sufficient randomness? Can that be controlled with parameters? Do you use self-adaptivity? Do you use any other advanced parameter control mechanisms (e.g., variable across iterations)? Did you try other mutation operators not included in the final version? Why did you discard them?}
 
 The mutation operator that existed in the group phase, the sequence swap operator, was simplified to a simple swap operator that swaps two nodes at random. This operator had little effect on larger problem instances due to its proportionally small range. Therefore three different operators were introduced: reverse sequence mutation (RSM), partial shuffle mutation (PSM) and a hybrid of the two called hybridizing PSM RSM mutation (HPRM) \cite{hprm}.\\
 RSM chooses two nodes in the individual at random and reverses the sequence between the two nodes. PSM is similar but randomly shuffles the sequence between the nodes, thus introducing more randomness. HPRM is a combination of the two where the sequence between the nodes is reversed element-wise and shuffled after each reversion.\\
-All the operators discussed cannot be controlled by a parameter to tune the amount of randomness they introduce. The final evolutioanry algorithm uses \ReplaceMe{x} because it proved the best in the numerical experiments. The operator is applied with a probability $\alpha$ to an individual, with $\alpha = 0.2 *\frac{ \textit{mean objective}}{\textit{mean objective } + \textit{ best objective}}$. This idea is based on the idea from Kaabi and Harrath \cite{ann}. 
+All the operators discussed cannot be controlled by a parameter to tune the amount of randomness they introduce. The final evolutioanry algorithm uses RSM because it proved the best in the numerical experiments. The operator is applied with a probability $\alpha$ to an individual, with $\alpha = 0.2 *\frac{ \textit{mean objective}}{\textit{mean objective } + \textit{ best objective}}$. This idea is based on the idea from Kaabi and Harrath \cite{ann}. 
 
 \subsection{Recombination operators}
 
@@ -132,6 +132,10 @@ All the operators discussed cannot be controlled by a parameter to tune the amou
 
 \ReplaceMe{What local search operators did you implement? Describe them. Did they cause a significant improvement in the performance of your algorithm? Why (not)? Did you consider other local search operators that did not make the cut? Why did you discard them? Are there parameters that need to be determined in your operator? Do you use an advanced scheme to determine them (e.g., adaptive or self-adaptive)?}
 
+Three different local search operators where considered. All three operators are based on a neighborhood structure. The first one is a 3-opt method where a tour is seen as three different arcs (A-B-C). If the alternative A-C-B is shorter then this tour is kept. The second operator is a 2-opt operator. This operator swaps two neighboring nodes in an individual if it is shorter than the other way around. The last operator reverses the individual as a whole if it is shorter. This operator was not implemented since it would not have a big effect because of the way the distance matrix is generated.\\
+The final algorithm uses the 3-opt local search operator based on the one proposed by Kanellakis and Papadimitriou \cite{kanellakispapadimitriou} and improved by Bentley \cite{bentley} and Nagata and Soler \cite{nagatasoler}. Instead of splitting the tour in arcs in all possible places, a list of nearest neighbors is used for each node. Once a first splitting point is chosen, then the second point is limited by this list of nearest neighbors. This reduces the computations needed to perform the local search while still receiving a good improvement on the individual. To reduce the computations even further, the first splitting point is chosen at random. This makes that there is not always a better individual found using the operator, but if the individual makes it to the next generation then another random splitting point will be chosen. This approach proved experimentally better than doing a full 3-opt search on the individuals.\\
+The only parameter that needs to be chosen is the number of nearest neighbors that is kept in the neighbor list. Nagata and Soler suggested to use 15. This is also the value used in this evolutionary algorithm. 
+
 \subsection{Diversity promotion mechanisms} \label{sec:diversity}
 
 \ReplaceMe{Did you implement a diversity promotion scheme? If yes, which one? If no, why not? Describe the mechanism you implemented. In what sense does the mechanism improve the performance of your evolutionary algorithm? Are there parameters that need to be determined? Did you use an advanced scheme to determine them?}
@@ -146,13 +150,30 @@ During the development phase, a combination of two criteria was used. The first 
 
 \ReplaceMe{Describe the main loop of your evolutionary algorithm using a clear picture (preferred) or high-level pseudocode. In what order do you apply the various operators? Why that order? If you are using several selection, mutation, recombination, elimination, and local search operators, describe how you choose among the possibilities. Are you selecting/eliminating all individuals in parallel, or one by one? With or without replacement?}
 
+Before the main loop starts, some parameters that depend on the tour size are initialized. The offspring is generated in the \texttt{recombination} function. In there the individuals are selected with replacement in parallel. Afterwards all parents and children are supplied to the \texttt{mutation} function. This function applies mutation with a given probability $\alpha$ specified in section \ref{sec:mutation}. Then the local search operator is applied on half of these individuals. Elimination and diversification is then applied to the optimized population. The next part is 'restarting' the algorithm if there is a risk of settling in a local minimum. Finally the results of this generation is reported to the reporter and the loop is restarted. The main loop can be seen in Figure \ref{code:main}.
+
+\begin{figure}
+\inputpython{../r0701014.py}{198}{253}
+\caption{The main loop of the evolutionary algorithm}
+\label{code:main}
+\end{figure}
+
+
 \subsection{Parameter selection} \label{sec:hyperparameter}
 
 \ReplaceMe{For all of the parameters that are not automatically determined by adaptivity or self-adaptivity (as you have described above), describe how you determined them. Did you perform a hyperparameter search? How did you do this? How did you determine these parameters would be valid both for small and large problem instances?}
 
+Tuning all parameters of an evolutionary algorithm is huge problem on its own. Therefore not all possible combinations of the parameters and operators were tested. The tuning process was split in multiple parts in order to decrease the time needed. The first part of this process was deciding the mutation and recombination operators out of the possibilities described in section \ref{sec:evolutionary algorithm}. All the different combinations of mutation and recombination operators were tested 20 times on the smallest tour. The most promising mutation operator were RSM and HPRM, but there was not a recombination operator that was significantly better. The remaining mutation operators and all recombination operators were then tested on \texttt{tour194.csv} in order to try create a more significant difference between the recombination operators. The experiment showed that OX and SCX performed similar whilst PMX performed a fraction worse. For the final evolutionary algorithm OX was chosen, because it typically needed less generations than SCX to converge. Note that during this experiment it was assumed that all operators had similar performance with the same parameters. This is normally not the case.\\
+
+Now that the operators are chosen, different experiments can be performed on the parameters of the evolutionary algorithm. If a value of a parameter was suggested by the authors of a paper about the operator, then this value was used and not changed or included in the hyperparamter search.
+
 \subsection{Other considerations}
 
 \ReplaceMe{Did you consider other items not listed above, such as elitism, multiobjective optimization strategies (e.g., island model, pareto front approximation), a parallel implementation, or other interesting computational optimizations (e.g. using advanced algorithms or data structures)? You can describe them here or add additional subsections as needed.}
+
+Some operators, like the local search operator and the fitness sharing elimination, are computationally expensive. But the results of these operators don't depend on each other. Therefore these operators can be executed in parallel. To accomplish this a \texttt{RawArray} from \texttt{multiprocessing} is used for the distance matrix. This is a one dimensional array that cannot be locked, but this is not needed because the parallel processes will not alter the matrix.\\
+
+Sometimes during the execution of the algorithm, it occurs that it gets stuck in a local minimum and the diversity and local search operator are not able to get the individual out of it. To cope with this problem, the evolutionary algorithm 'restarts' itself by randomly initializing a completely new population when the best individual has not been changed for a set number of iterations. 
 
 
 \section{Numerical experiments}
