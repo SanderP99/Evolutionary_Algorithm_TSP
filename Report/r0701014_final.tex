@@ -2,7 +2,7 @@
 \usepackage[utf8]{inputenc}
 
 \usepackage[english]{babel}
-\usepackage[dvinames]{xcolor}
+\usepackage[dvinames,table,xcdraw]{xcolor}
 \usepackage[compact,small]{titlesec}
 \usepackage{booktabs}
 \usepackage{multirow}
@@ -13,10 +13,13 @@
 \setlist{noitemsep,parsep=2pt}
 \newcommand{\highlight}[1]{\textcolor{kuleuven}{#1}}
 \usepackage{pythonhighlight}
-\usepackage{cleveref}
+\usepackage[hidelinks]{hyperref}
+%\usepackage{cleveref}
 \usepackage{graphicx}
 \usepackage[nottoc]{tocbibind}
 \usepackage{url}
+\usepackage{pgfplots}
+\usepackage{layouts}
 
 \newcommand{\nextyear}{\advance\year by 1 \the\year\advance\year by -1}
 \newcommand{\thisyear}{\the\year}
@@ -122,11 +125,14 @@ All the operators discussed cannot be controlled by a parameter to tune the amou
 
 \ReplaceMe{Which recombination operators did you implement? If they are not from the slides, describe them. How do you choose among several recombination operators? Why did you choose these ones specifically? Explain how you believe that these operators can produce offspring that combine the best features from their parents. How does your operator behave if there is little overlap between the parents? Can your recombination be controlled with parameters; what behavior do they change? Do you use self-adaptivity? Do you use any other advanced parameter control mechanisms (e.g., variable across iterations)? Did you try other recombination operators not included in the final version? Why did you discard them? Did you consider recombination with arity strictly greater than 2?}
 
-
+The recombination operator implemented during the group phase, partially mapped crossover (PMX), was kept. Two other recombination operators called order crossover (OX) and sequential constructive crossover (SCX) proposed by Davis \cite{davis} and Ahmed \cite{ahmed}. All three operators start from the same principle, two crossover points are chosen at random in both parents. The nodes between these points are then copied to the offspring. How the rest of the nodes are copied differs between the operators. PMX tries to keep the positions of the nodes consistent by using cycles in the parents. OX copies the unused nodes from the parent of which the nodes between the crossover points have not been copied to the child. SCX searches in both parents to the next unused node and picks the one that is the nearest to the node previously inserted in the child. This operator thus only creates one child from two parents. Therefore double the number of recombinations are needed in order to generate the same number of offspring.\\
+Since OX and SCX respect the relative order of nodes in the parents, these will probably perform better than PMX on the asymmetric TSP. The experiments performed in section \ref{sec:hyperparameter} also show this. The final algorithm uses OX since it had better results on bigger problem instances. This operator guarantees that if an edge between two nodes is present in both parents, it will definitely be copied to the offspring. If there is little overlap between the parents, then the operator will practically copy half of both parents to the children. Due to the complexity of recombination operators on permutations operators with arity greater than two have not been considered. The operators themselves don't depend on any parameters. They just create the number of children specified in the \texttt{offsping\_size} variable.
 
 \subsection{Elimination operators}
 
 \ReplaceMe{Which elimination operators did you implement? If they are not from the slides, describe them. Why did you select this one? Are there parameters that need to be chosen? Did you use an advanced scheme to vary these parameters throughout the iterations? Did you try other elimination operators not included in the final version? Why did you discard them?} 
+
+The only elimination scheme implemented is $(\lambda + \mu)$-elimination, which was created in the group phase. Since it is not guaranteed that the offspring will be better than the previous generation, this is the best option. To make sure that the best objective value will not diverge, elitism is applied to the population after elimination. This is described in section \ref{sec:other}.
 
 \subsection{Local search operators}
 
@@ -139,6 +145,11 @@ The only parameter that needs to be chosen is the number of nearest neighbors th
 \subsection{Diversity promotion mechanisms} \label{sec:diversity}
 
 \ReplaceMe{Did you implement a diversity promotion scheme? If yes, which one? If no, why not? Describe the mechanism you implemented. In what sense does the mechanism improve the performance of your evolutionary algorithm? Are there parameters that need to be determined? Did you use an advanced scheme to determine them?}
+
+Two different diversity promotion schemes have been implemented. Fitness sharing in the elimination phase and the removal of duplicate individuals after elimination as proposed by Herrera-Poyatos and Herrera \cite{herrera}.\\
+Fitness sharing is implemented as described in the slides of this course. The distance function used is the number of edges that are different between two individuals. The computation of the distance function is very expensive and is therefore executed in parallel. This scheme needs a maximum distance $\sigma$ that will be considered in order to apply the penalties.\\
+The removal of duplicate individuals is based on the objective values. If the objective values are not equal then the individuals cannot be the same. This check is much easier than the distance computation in fitness sharing. If two or more individuals are the same, then one is kept and the others are replaced by a greedy randomized algorithm. The individual is initialized starting from a random node and the next chosen node is picked randomly from the set restricted candidates. These candidates are all nodes that are less than $\sigma$ percent longer than the greedy option.\\
+The final algorithm uses the greedy diversification option because it performed better on the larger problem instances. Computing the distances for all individuals proved to be too costly. The parameter $\sigma$ used in the greedy diversification algorithm is set to 10 as suggested by the authors of the paper.
 
 \subsection{Stopping criterion}
 
@@ -165,15 +176,39 @@ Before the main loop starts, some parameters that depend on the tour size are in
 
 Tuning all parameters of an evolutionary algorithm is huge problem on its own. Therefore not all possible combinations of the parameters and operators were tested. The tuning process was split in multiple parts in order to decrease the time needed. The first part of this process was deciding the mutation and recombination operators out of the possibilities described in section \ref{sec:evolutionary algorithm}. All the different combinations of mutation and recombination operators were tested 20 times on the smallest tour. The most promising mutation operator were RSM and HPRM, but there was not a recombination operator that was significantly better. The remaining mutation operators and all recombination operators were then tested on \texttt{tour194.csv} in order to try create a more significant difference between the recombination operators. The experiment showed that OX and SCX performed similar whilst PMX performed a fraction worse. For the final evolutionary algorithm OX was chosen, because it typically needed less generations than SCX to converge. Note that during this experiment it was assumed that all operators had similar performance with the same parameters. This is normally not the case.\\
 
-Now that the operators are chosen, different experiments can be performed on the parameters of the evolutionary algorithm. If a value of a parameter was suggested by the authors of a paper about the operator, then this value was used and not changed or included in the hyperparamter search.
+Now that the operators are chosen, different experiments can be performed on the parameters of the evolutionary algorithm. If a value of a parameter was suggested by the authors of a paper about the operator, then this value was used and not changed or included in the hyperparameter search. The following parameters were selected to perform a hyperparameter search on: the population size $\lambda$, the offspring size $\mu$ and the percentage of individuals to perform local search on $l$. In Table \ref{table:hyperparameter} all the tested values for the different parameters can be found.\\
+The hyperparameter search was performed on the smallest problem instance \texttt{tour29}. Each combination was tested 8 times to reduce the random effect of the operators. Since the mean values were not much of an indicator for the performance, the success rate was used. Where success is defined as finding the global minimum tour length. Obviously bigger population and offspring sizes show a higher succes rate, as seen in Figure \ref{fig:hyperparameter},but there ain't no such thing as a free lunch \cite{freelunch}. Therefore promising values that demand less calculations, like a population size around 25 and an offspring size around 50, are explored in a new hyperparameter search on a larger problem instance.
 
-\subsection{Other considerations}
+\begin{figure}
+\centering
+\scalebox{.6}{\input{../nofreelunch.pgf}}
+\caption{Successes for different parameter values on \texttt{tour29}.}
+\label{fig:hyperparameter}
+\end{figure}
+
+\begin{table}[]
+\centering
+\caption{Parameter values for the hyperparameter search}
+\label{table:hyperparameter}
+\begin{tabular}{|l|r|}
+\hline
+\rowcolor[HTML]{C0C0C0} 
+Parameter & Values                       \\ \hline
+$\lambda$ & 8, 16, 32, 100               \\ \hline
+$\mu$     & 8, 16, 32, 50, 100      \\ \hline
+$l$       & 0, 0.25, 0.5, 0.75, 1   \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Other considerations} \label{sec:other}
 
 \ReplaceMe{Did you consider other items not listed above, such as elitism, multiobjective optimization strategies (e.g., island model, pareto front approximation), a parallel implementation, or other interesting computational optimizations (e.g. using advanced algorithms or data structures)? You can describe them here or add additional subsections as needed.}
 
 Some operators, like the local search operator and the fitness sharing elimination, are computationally expensive. But the results of these operators don't depend on each other. Therefore these operators can be executed in parallel. To accomplish this a \texttt{RawArray} from \texttt{multiprocessing} is used for the distance matrix. This is a one dimensional array that cannot be locked, but this is not needed because the parallel processes will not alter the matrix.\\
 
-Sometimes during the execution of the algorithm, it occurs that it gets stuck in a local minimum and the diversity and local search operator are not able to get the individual out of it. To cope with this problem, the evolutionary algorithm 'restarts' itself by randomly initializing a completely new population when the best individual has not been changed for a set number of iterations. 
+Sometimes during the execution of the algorithm, it occurs that it gets stuck in a local minimum and the diversity and local search operator are not able to get the individual out of it. To cope with this problem, the evolutionary algorithm 'restarts' itself by randomly initializing a completely new population when the best individual has not been changed for a set number of iterations. \\
+
+Elitism is used to stop the algorithm from diverging from the optimal value. If the best individual after elimination is worse than the best individual of the previous generation, then this individual is inserted and the current worst individual is discarded. 
 
 
 \section{Numerical experiments}
@@ -186,6 +221,25 @@ Sometimes during the execution of the algorithm, it occurs that it gets stuck in
 
 Report the main characteristics of the computer system on which you ran your evolutionary algorithm. Include the processor or CPU (including the number of cores and clock speed), the amount of main memory, and the version of Python 3.}
 
+All experiments conducted in this section are done using the same parameter values. The parameters that have a fixed value can be found in Table \ref{table:experiments} and the dynamic parameters take the values specified in section \ref{sec:evolutionary algorithm}.
+
+\begin{table}
+\begin{center}
+\caption{Static parameters used in the numerical experiments}
+\label{table:experiments}
+\begin{tabular}{|l|c||l|c|}\hline
+\rowcolor[HTML]{C0C0C0}
+Parameter	& Value		& Parameter	& Value \\ \hline
+Population size $\lambda$	& 	&Offspring size $\mu$	& \\
+Number of nearest neighbors	& 15	& Selection pressure	& 0.99 \\
+Margin $\sigma$ in greedy diversification	&0.10	&Selection pressure decay	&0.99 \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+
+All numeric experiments were performed on a 64-bit version of Ubuntu 20.04 with a quad-core Intel i5-7300U @ 2.60 GHz and 16 GB of memory. Python version 3.8.5 was used.
 
 \subsection{tour29.csv}
 
@@ -230,6 +284,8 @@ Did your algorithm converge before the time limit? How many iterations did you p
 \RemoveMe{\textbf{Goal:} Based on this section, we will evaluate your understanding and insight into the main strengths and weaknesses of your evolutionary algorithms.}
 
 \ReplaceMe{Describe the main lessons learned from this project. What do you think are the main strong points of evolutionary algorithms in general? Did you apply these strengths in this project? What are the main weaknesses of evolutionary algorithms and of your implementation in particular? Do you think these can be avoided or mitigated? How? Do you believe evolutionary algorithms are appropriate for this problem? Why (not)? What surprised you and why? What did you learn from this project?}
+
+
 
 \section{Other comments} \label{sec_other}
 

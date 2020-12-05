@@ -1,4 +1,4 @@
-\begin{thebibliography}{1}
+\begin{thebibliography}{10}
 
 \bibitem{ann}
 Jihene Kaabi and Youssef Harrath.
@@ -25,6 +25,20 @@ Abdoun Otman, Chakir Tajani, and Jaafar Abouchabka.
   Travelling salesman problem.
 \newblock 05 2012.
 
+\bibitem{davis}
+Lawrence Davis.
+\newblock Applying adaptive algorithms to epistatic domains.
+\newblock In {\em Proceedings of the 9th International Joint Conference on
+  Artificial Intelligence - Volume 1}, IJCAI'85, page 162–164, San Francisco,
+  CA, USA, 1985. Morgan Kaufmann Publishers Inc.
+
+\bibitem{ahmed}
+Zakir Ahmed.
+\newblock Genetic algorithm for the traveling salesman problem using sequential
+  constructive crossover operator.
+\newblock {\em International Journal of Biometric and Bioinformatics}, 3, 03
+  2010.
+
 \bibitem{kanellakispapadimitriou}
 Paris-C. Kanellakis and Christos~H. Papadimitriou.
 \newblock Local search for the asymmetric traveling salesman problem.
@@ -42,5 +56,17 @@ Yuichi Nagata and David Soler.
 \newblock A new genetic algorithm for the asymmetric traveling salesman
   problem, expert systems with applications.
 \newblock {\em Expert Systems with Applications}, 39(10):8947--8953, 2012.
+
+\bibitem{herrera}
+Andr{\'{e}}s Herrera{-}Poyatos and Francisco Herrera.
+\newblock Genetic and memetic algorithm with diversity equilibrium based on
+  greedy diversification.
+\newblock {\em CoRR}, abs/1702.03594, 2017.
+
+\bibitem{freelunch}
+D.~H. {Wolpert} and W.~G. {Macready}.
+\newblock No free lunch theorems for optimization.
+\newblock {\em IEEE Transactions on Evolutionary Computation}, 1(1):67--82,
+  1997.
 
 \end{thebibliography}

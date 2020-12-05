@@ -158,7 +158,7 @@ class r0701014:
 
         # EA parameters
         self.population_size: int = 16  # Number of individuals in population
-        self.offspring_size: int = 60  # Number of children created per generation
+        self.offspring_size: int = 50  # Number of children created per generation
         self.k: int = 3  # The k used in k-tournament selection
         self.selection_pressure: float = 0  # The selection pressure used
         self.selection_pressure_decay = 0  # The factor for the decay of the selection pressure in geometric decay
@@ -179,7 +179,7 @@ class r0701014:
 
         # EA functions
         self.selection_function = self.selection_roulette_wheel  # Selection function to use
-        self.recombination_function = self.sequential_constructive_crossover  # Recombination function to use
+        self.recombination_function = self.order_crossover  # Recombination function to use
         self.mutation_function = self.reverse_sequence_mutation  # Mutation function to use
         self.elimination_function = self.lambda_and_mu_elimination  # Elimination function to use
         self.local_search_operator = self.local_search_optimized_3_opt  # Local search operator to use
@@ -235,7 +235,6 @@ class r0701014:
                 self.use_random_initialization = True
                 population = self.initialize_population()
                 population[0] = self.best_solution
-
 
             if self.mean_objective != np.inf:
                 self.alpha = 0.2 * self.mean_objective / (self.best_objective + self.mean_objective)
@@ -301,7 +300,7 @@ class r0701014:
             for i in range(self.tour_size):
                 new_tour = self.make_greedy_tour(i)
                 k = 1
-                while new_tour == np.inf:
+                while self.length_individual(new_tour) == np.inf:
                     new_tour = self.make_greedy_tour(i + k)
                     k += 1
                 nn[i] = new_tour
@@ -1047,34 +1046,32 @@ class r0701014:
         var_dict['individuals_size'] = self.population_size + self.offspring_size
 
 
+# with open('testHP194.csv', 'w', newline='') as file:
+#     writer = csv.writer(file, delimiter=',')
+#     writer.writerow(['Generations', 'Time', 'Mean', 'Best', 'Population', 'Offspring', 'Local search'])
 
-
-with open('mutation_recombination_194.csv', 'w', newline='') as file:
-    writer = csv.writer(file, delimiter=',')
-    writer.writerow(['Generations', 'Time', 'Mean', 'Best', 'Mutation', 'Recombination'])
-
-
-# TSP1 = r0701014()
-
-
-
-for _ in range(10):
+for _ in range(3):
     TSP = r0701014()
-    mutations = [TSP.reverse_sequence_mutation,
-                 TSP.hybridizing_psm_rsm_mutation]
-    recombinations = [TSP.pmx, TSP.order_crossover, TSP.sequential_constructive_crossover]
-    all_combinations = itertools.product(mutations, recombinations)
+    population_sizes = [16, 25, 32]
+    offspring_sizes = [40, 50, 60]
+    local_search = [0.5]
+    all_combinations = itertools.product(population_sizes, offspring_sizes, local_search)
     print(all_combinations)
-    for mutation, recombination in all_combinations:
+    for pop_size, offspring_size, local in all_combinations:
         TSP.__init__()
-        TSP.mutation_function = mutation
-        TSP.recombination_function = recombination
+        TSP.population_size = pop_size
+        TSP.offspring_size = offspring_size
+        if local == 1:
+            TSP.local_search_on_all = True
+        else:
+            TSP.percentage_local_search = local
         TSP.optimize('tour194.csv')
 
-        with open('mutation_recombination_194.csv', 'a') as file:
+        with open('testHP194.csv', 'a') as file:
             writer = csv.writer(file, delimiter=',')
-            writer.writerow([TSP.generation, TSP.time_left, TSP.mean_objective, TSP.best_objective,
-                             TSP.mutation_function.__name__, TSP.recombination_function.__name__])
+            writer.writerow(
+                [TSP.generation, TSP.time_left, TSP.mean_objective, TSP.best_objective, pop_size, offspring_size,
+                 local])
 
-
-# TSP.optimize('tour29.csv')
+# TSP = r0701014()
+# TSP.optimize('tour929.csv')
