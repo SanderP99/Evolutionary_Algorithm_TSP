@@ -69,4 +69,14 @@ D.~H. {Wolpert} and W.~G. {Macready}.
 \newblock {\em IEEE Transactions on Evolutionary Computation}, 1(1):67--82,
   1997.
 
+\bibitem{video1}
+Code Bullet.
+\newblock Ai learns to play snake using genetic algorithm and deep learning.
+\newblock \url{https://www.youtube.com/watch?v=3bhP7zulFfY}, 12 2017.
+
+\bibitem{video2}
+Code Bullet.
+\newblock Using a.i. to dominate nerds in tetris.
+\newblock \url{https://www.youtube.com/watch?v=os4DcbpL0Nc}, 09 2020.
+
 \end{thebibliography}

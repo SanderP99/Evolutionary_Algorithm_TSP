@@ -281,8 +281,8 @@ class r0701014:
             offspring = self.recombination(population)
             mutated_population = self.mutation(population, offspring)
 
-            optimized_population = self.local_search(mutated_population)
-            # optimized_population = self.local_search_parallel(mutated_population)
+            # optimized_population = self.local_search(mutated_population)
+            optimized_population = self.local_search_parallel(mutated_population)
 
             # population, scores = self.fitness_sharing_elimination(optimized_population)
 
@@ -308,17 +308,11 @@ class r0701014:
                     / (self.best_objective + self.mean_objective)
                 )
 
-            # Call the reporter with:
-            #  - the mean objective function value of the population
-            #  - the best objective function value of the population
-            #  - a 1D numpy array in the cycle notation containing the best solution
-            #    with city numbering starting from 0
             time_left = self.reporter.report(
                 self.mean_objective, self.best_objective, self.best_solution
             )
-            self.time_left = time_left
-            # if time_left < 0:
-            #     break
+            if time_left < 0:
+                break
 
         return 0
 
@@ -534,15 +528,15 @@ class r0701014:
             p2[child2[i]] = i
 
         # Choose crossover points
-        cxpoint1 = np.random.randint(0, self.tour_size)
-        cxpoint2 = np.random.randint(0, self.tour_size - 1)
-        if cxpoint2 >= cxpoint1:
-            cxpoint2 += 1
+        point1 = np.random.randint(0, self.tour_size)
+        point2 = np.random.randint(0, self.tour_size - 1)
+        if point2 >= point1:
+            point2 += 1
         else:  # Swap the two cx points
-            cxpoint1, cxpoint2 = cxpoint2, cxpoint1
+            point1, point2 = point2, point1
 
         # Apply crossover between cx points
-        for i in range(cxpoint1, cxpoint2):
+        for i in range(point1, point2):
             # Keep track of the selected values
             temp1 = child1[i]
             temp2 = child2[i]
@@ -764,7 +758,7 @@ class r0701014:
         :param joined_population: The population to perform the elimination on
         :return: The population after elimination sorted by fitness value and a list of the corresponding fitness values
         """
-        return self.elimination_function(joined_population)
+        return self.elimination(joined_population)
 
     def lambda_and_mu_elimination(
         self, joined_population: np.array

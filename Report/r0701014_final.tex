@@ -164,7 +164,7 @@ During the development phase, a combination of two criteria was used. The first 
 Before the main loop starts, some parameters that depend on the tour size are initialized. The offspring is generated in the \texttt{recombination} function. In there the individuals are selected with replacement in parallel. Afterwards all parents and children are supplied to the \texttt{mutation} function. This function applies mutation with a given probability $\alpha$ specified in section \ref{sec:mutation}. Then the local search operator is applied on half of these individuals. Elimination and diversification is then applied to the optimized population. The next part is 'restarting' the algorithm if there is a risk of settling in a local minimum. Finally the results of this generation is reported to the reporter and the loop is restarted. The main loop can be seen in Figure \ref{code:main}.
 
 \begin{figure}
-\inputpython{../r0701014.py}{198}{253}
+\inputpython{../r0701014.py}{258}{317}
 \caption{The main loop of the evolutionary algorithm}
 \label{code:main}
 \end{figure}
@@ -230,7 +230,7 @@ All experiments conducted in this section are done using the same parameter valu
 \begin{tabular}{|l|c||l|c|}\hline
 \rowcolor[HTML]{C0C0C0}
 Parameter	& Value		& Parameter	& Value \\ \hline
-Population size $\lambda$	& 	&Offspring size $\mu$	& \\
+Population size $\lambda$	&16 	&Offspring size $\mu$	&50 \\
 Number of nearest neighbors	& 15	& Selection pressure	& 0.99 \\
 Margin $\sigma$ in greedy diversification	&0.10	&Selection pressure decay	&0.99 \\
 \hline
@@ -285,7 +285,11 @@ Did your algorithm converge before the time limit? How many iterations did you p
 
 \ReplaceMe{Describe the main lessons learned from this project. What do you think are the main strong points of evolutionary algorithms in general? Did you apply these strengths in this project? What are the main weaknesses of evolutionary algorithms and of your implementation in particular? Do you think these can be avoided or mitigated? How? Do you believe evolutionary algorithms are appropriate for this problem? Why (not)? What surprised you and why? What did you learn from this project?}
 
-
+This project was very useful to get a better understanding of the workings of evolutionary algorithms. I knew that these algorithms existed and have seen them applied to games in different YouTube videos \cite{video1, video2}, but the fact that they can be applied to other problems as well was new to me. \\
+I think that one of the key strengths of evolutionary algorithms is the fact that the search space can be explored in a structured way instead of sampling the domain at random and hoping for a good solution. But this strength can be its downfall as well. If the algorithm gets finds a local optimum, it can get stuck in this optimum. This weakness is further increased by the use of local search operators. Luckily diversion promotion schemes exist that try to counteract these weaknesses.\\
+All these operators are used in the algorithm described in this paper. The biggest weakness of this algorithm is the local search operator. It is very powerful and this sometimes causes the algorithm to converge to local optima. Different diversity promotion schemes were tested to handle this problem but none of them were ideal. Some were computationally too expensive to perform in the five minute time span, whilst others were too disruptive. This caused that the algorithm essentially needed to converge twice in the five minutes given. A less powerful local search operator could mitigate the problem, but than more time is needed in order to converge. I think that the algorithm I have implemented is a good compromise between computation and results.\\
+Another weakness of evolutionary algorithms is the need for parameter tuning.  This surprised me, because most of the times the results of the parameters 'out-of-the-box' are significantly worse than the tuned parameters. I did not know there were so many parameters to choose. Self-adaptivity can help with this problem, but sometimes these schemes require starting parameters themselves. In this case the parameter selection took almost 30 times longer than the algorithm is allowed to run. It would almost be worth using a evolutionary algorithm to set the parameters of the evolutionary algorithm.\\
+I will definitely try out evolutionary algorithms on other problems in the future. The capabilities are almost endless with the different mutation, recombination and other operators. 
 
 \section{Other comments} \label{sec_other}
 
