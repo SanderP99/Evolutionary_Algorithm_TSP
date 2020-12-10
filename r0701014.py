@@ -67,15 +67,15 @@ def parallel_3_opt(individual: np.array) -> np.array:
 
 
 def check_for_3_opt_move(
-    individual: np.array,
-    point1: int,
-    point2: int,
-    v1: int,
-    v2: int,
-    v3: int,
-    v4: int,
-    v5: int,
-    v6: int,
+        individual: np.array,
+        point1: int,
+        point2: int,
+        v1: int,
+        v2: int,
+        v3: int,
+        v4: int,
+        v5: int,
+        v6: int,
 ):
     """
     This function checks for a possible 3 opt move for the arcs between endpoints v1-v2, v3-v4 and v5-v6.
@@ -95,10 +95,10 @@ def check_for_3_opt_move(
         var_dict["distance_matrix"], dtype=np.float64
     ).reshape(tour_size, tour_size)
     old_distance = (
-        distance_matrix[v2][v3] + distance_matrix[v4][v5] + distance_matrix[v6][v1]
+            distance_matrix[v2][v3] + distance_matrix[v4][v5] + distance_matrix[v6][v1]
     )
     new_distance = (
-        distance_matrix[v2][v5] + distance_matrix[v6][v3] + distance_matrix[v4][v1]
+            distance_matrix[v2][v5] + distance_matrix[v6][v3] + distance_matrix[v4][v1]
     )
 
     if new_distance < old_distance:
@@ -263,15 +263,13 @@ class r0701014:
         # Read the distance matrix from file
         data = np.loadtxt(filename, delimiter=",")
         self.tour_size = data.shape[0]
-        self.raw_distance_matrix = RawArray(
-            ctypes.c_double, self.tour_size * self.tour_size
-        )
-        self.distance_matrix = np.frombuffer(
-            self.raw_distance_matrix, dtype=np.float64
-        ).reshape(self.tour_size, self.tour_size)
+        self.raw_distance_matrix = RawArray(ctypes.c_double, self.tour_size * self.tour_size)
+
+        self.distance_matrix = np.frombuffer(self.raw_distance_matrix, dtype=np.float64)\
+            .reshape(self.tour_size, self.tour_size)
         np.copyto(self.distance_matrix, data)
 
-        self.sigma = np.floor(0.05 * self.tour_size)
+        # self.sigma = np.floor(0.05 * self.tour_size)
         self.build_nearest_neighbor_list()
         self.init_dictionary()
 
@@ -281,15 +279,10 @@ class r0701014:
             offspring = self.recombination(population)
             mutated_population = self.mutation(population, offspring)
 
-            # optimized_population = self.local_search(mutated_population)
             optimized_population = self.local_search_parallel(mutated_population)
 
-            # population, scores = self.fitness_sharing_elimination(optimized_population)
-
             population, scores = self.elimination(optimized_population)
-            population, scores = self.eliminate_duplicate_individuals(
-                population, scores
-            )
+            population, scores = self.eliminate_duplicate_individuals(population, scores)
             population, scores = self.elitism(population, scores)
 
             self.update_scores(population[0], scores)
@@ -302,11 +295,7 @@ class r0701014:
                 population[0] = self.best_solution
 
             if self.mean_objective != np.inf:
-                self.alpha = (
-                    0.2
-                    * self.mean_objective
-                    / (self.best_objective + self.mean_objective)
-                )
+                self.alpha = (0.2 * self.mean_objective / (self.best_objective + self.mean_objective))
 
             time_left = self.reporter.report(
                 self.mean_objective, self.best_objective, self.best_solution
@@ -429,8 +418,8 @@ class r0701014:
         selection = np.empty((n, self.tour_size), dtype=np.int)
         for i in range(n):
             individuals = population[
-                np.random.choice(self.population_size, self.k, replace=True), :
-            ]
+                          np.random.choice(self.population_size, self.k, replace=True), :
+                          ]
             objective_values = self.length(individuals)
             perm = np.argsort(objective_values)
             selection[i] = individuals[perm[0]]
@@ -465,15 +454,15 @@ class r0701014:
         :return: The selected individuals.
         """
         total_rank = (
-            self.population_size * (self.population_size + 1) / 2
+                self.population_size * (self.population_size + 1) / 2
         )  # Sum 1..N = N * (N-1) / 2
         probabilities = np.arange(1, self.population_size + 1)[::-1] / total_rank
         return population[
-            np.random.choice(
-                self.population_size, size=n, replace=True, p=probabilities
-            ),
-            :,
-        ]
+               np.random.choice(
+                   self.population_size, size=n, replace=True, p=probabilities
+               ),
+               :,
+               ]
 
     ###################
     #  RECOMBINATION  #
@@ -616,7 +605,7 @@ class r0701014:
         return child
 
     def find_first_node(
-        self, previous_node: int, parent: np.array, nodes_used: set
+            self, previous_node: int, parent: np.array, nodes_used: set
     ) -> int:
         """
         Finds the node after a given node that is not already used.
@@ -758,10 +747,10 @@ class r0701014:
         :param joined_population: The population to perform the elimination on
         :return: The population after elimination sorted by fitness value and a list of the corresponding fitness values
         """
-        return self.elimination(joined_population)
+        return self.elimination_function(joined_population)
 
     def lambda_and_mu_elimination(
-        self, joined_population: np.array
+            self, joined_population: np.array
     ) -> Tuple[np.array, np.array]:
         """
         Performs (lambda + mu)-elimination on the population and offspring (joined population). The number of
@@ -826,7 +815,7 @@ class r0701014:
         return new_population, self.length(new_population)
 
     def compute_penalties(
-        self, individual_to_compute_distance_from, population, penalties
+            self, individual_to_compute_distance_from, population, penalties
     ) -> np.array:
         """
         This function computes the penalties introduced by an individual already in the next generation on the
@@ -874,7 +863,7 @@ class r0701014:
         return distance
 
     def eliminate_duplicate_individuals(
-        self, joined_population: np.array, objective_values: np.array
+            self, joined_population: np.array, objective_values: np.array
     ) -> Tuple[np.array, np.array]:
         """
         This function is an elimination scheme that tries to introduce diversity into the population. If there are two
@@ -921,7 +910,7 @@ class r0701014:
             ] = 1  # Always perform local search on the fittest individual
             population_to_search = population[
                 random_numbers > self.percentage_local_search
-            ]
+                ]
             rest = population[random_numbers <= self.percentage_local_search]
             with Pool(processes=2) as pool:
                 result = pool.map(parallel_3_opt, population_to_search)
@@ -966,14 +955,14 @@ class r0701014:
             d = individual[(i + 2) % self.tour_size]
 
             normal_distance = (
-                self.distance_matrix[a][b]
-                + self.distance_matrix[b][c]
-                + self.distance_matrix[c][d]
+                    self.distance_matrix[a][b]
+                    + self.distance_matrix[b][c]
+                    + self.distance_matrix[c][d]
             )
             new_distance = (
-                self.distance_matrix[a][c]
-                + self.distance_matrix[c][b]
-                + self.distance_matrix[b][d]
+                    self.distance_matrix[a][c]
+                    + self.distance_matrix[c][b]
+                    + self.distance_matrix[b][d]
             )
             if new_distance < normal_distance:
                 individual[i], individual[(i + 1) % self.tour_size] = (
@@ -1042,16 +1031,16 @@ class r0701014:
         return individual
 
     def check_for_3_opt_move(
-        self,
-        individual: np.array,
-        point1: int,
-        point2: int,
-        v1: int,
-        v2: int,
-        v3: int,
-        v4: int,
-        v5: int,
-        v6: int,
+            self,
+            individual: np.array,
+            point1: int,
+            point2: int,
+            v1: int,
+            v2: int,
+            v3: int,
+            v4: int,
+            v5: int,
+            v6: int,
     ) -> np.array:
         """
         This function checks for a possible 3 opt move for the arcs between endpoints v1-v2, v3-v4 and v5-v6.
@@ -1067,14 +1056,14 @@ class r0701014:
         :return: The individual with the 3 opt move applied (if it is better than not)
         """
         old_distance = (
-            self.distance_matrix[v2][v3]
-            + self.distance_matrix[v4][v5]
-            + self.distance_matrix[v6][v1]
+                self.distance_matrix[v2][v3]
+                + self.distance_matrix[v4][v5]
+                + self.distance_matrix[v6][v1]
         )
         new_distance = (
-            self.distance_matrix[v2][v5]
-            + self.distance_matrix[v6][v3]
-            + self.distance_matrix[v4][v1]
+                self.distance_matrix[v2][v5]
+                + self.distance_matrix[v6][v3]
+                + self.distance_matrix[v4][v1]
         )
         if new_distance < old_distance:
             a = individual[:point1]
@@ -1194,8 +1183,8 @@ class r0701014:
         ).reshape(self.tour_size, self.number_of_nearest_neighbors)
         for i in range(self.tour_size):
             self.nearest_neighbors[i] = np.argsort(self.distance_matrix[i])[
-                1: self.number_of_nearest_neighbors + 1
-            ]
+                                        1: self.number_of_nearest_neighbors + 1
+                                        ]
 
     def init_dictionary(self) -> None:
         var_dict["distance_matrix"] = self.raw_distance_matrix
