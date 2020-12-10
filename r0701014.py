@@ -1,3 +1,4 @@
+import csv
 import ctypes
 from functools import partial
 from multiprocessing import Pool, RawArray
@@ -269,7 +270,6 @@ class r0701014:
             .reshape(self.tour_size, self.tour_size)
         np.copyto(self.distance_matrix, data)
 
-        # self.sigma = np.floor(0.05 * self.tour_size)
         self.build_nearest_neighbor_list()
         self.init_dictionary()
 
@@ -300,6 +300,7 @@ class r0701014:
             time_left = self.reporter.report(
                 self.mean_objective, self.best_objective, self.best_solution
             )
+            self.time_left = time_left
             if time_left < 0:
                 break
 
@@ -1193,9 +1194,17 @@ class r0701014:
         var_dict["individuals_size"] = self.population_size + self.offspring_size
 
 
-# with open('testHP194.csv', 'w', newline='') as file:
+# with open('1000Runs.csv', 'w', newline='') as file:
 #     writer = csv.writer(file, delimiter=',')
-#     writer.writerow(['Generations', 'Time', 'Mean', 'Best', 'Population', 'Offspring', 'Local search'])
+#     writer.writerow(['Generations', 'Time', 'Mean', 'Best'])
+
+
+# for _ in range(100):
+#     TSP = r0701014()
+#     TSP.optimize('tour29.csv')
+#     with open('1000Runs.csv', 'a', newline='') as file:
+#         writer = csv.writer(file, delimiter=',')
+#         writer.writerow([TSP.generation, 300 - TSP.time_left, TSP.mean_objective, TSP.best_objective])
 
 # for _ in range(3):
 #     TSP = r0701014()
@@ -1221,4 +1230,4 @@ class r0701014:
 #                  local])
 
 TSP = r0701014()
-TSP.optimize("tour100.csv")
+TSP.optimize("tour194.csv")
