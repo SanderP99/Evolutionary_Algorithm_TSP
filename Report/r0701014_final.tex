@@ -73,6 +73,9 @@ This report should be uploaded to Toledo by \deadlineReport. It must be in the \
 
 \paragraph{Implementation of a local search operator:} A local search operator is implemented to improve the candidate solutions and speed up the convergence.
 
+\paragraph{Ability to 'restart' the algorithm:} When the algorithm gets stuck in a minimum, it is able to restart it self with a new population and try to converge to another (better) minimum.
+
+
 \paragraph{Parallelization of the most expensive parts of the algorithm:} Computationally expensive parts of the algorithm like the local search operator have been parallelized by using the \pyth{multiprocessing} library.
 
 
@@ -103,7 +106,8 @@ An individual is represented as a 1D \pyth{numpy} array with the order of the vi
 
 \ReplaceMe{How do you initialize the population? How did you determine the number of individuals? Did you implement advanced initialization mechanisms (local search operators, heuristic solutions)? If so, describe them. Do you believe your approach maintains sufficient diversity? How do you ensure that your population enrichment scheme does not immediately take over the population? Did you implement other initialization schemes that did not make it to the final version? Why did you discard them? How did you determine the population size?}
 
-The population is initialized by using a greedy algorithm. The algorithm starts in a node and picks the nearest not visited node as the next node. The starting points are decided at random. This is a variation on all nearest neighbors (ANN) as proposed by Kaabi and Harrath \cite{ann}. This heuristic method creates less diversity than random initialization. Therefore a diversity promotion scheme is implemented and described in section \ref{sec:diversity}. The random initialization method is still available by setting the boolean value of \texttt{use\_random\_initialization} to true. This version explores more of the search space, but it will never reach the heuristic solution for the bigger problems in the given time span.
+The population is initialized by using a greedy algorithm. The algorithm starts in a node and picks the nearest not visited node as the next node. The starting points are decided at random. This is a variation on all nearest neighbors (ANN) as proposed by Kaabi and Harrath \cite{ann}. This heuristic method creates less diversity than random initialization. Therefore a diversity promotion scheme is implemented and described in section \ref{sec:diversity}. The random initialization method is still available by setting the boolean value of \texttt{use\_random\_initialization} to true. This version explores more of the search space, but it will never reach the the objective value of the heuristic solution for the bigger problems in the given time span.\\
+When the algorithm gets trapped in a (local) optimum, it will restart itself by setting half of its population to a new random population. These new individuals can then recombine with the original individuals to escape the optimum.
 
 \subsection{Selection operators}
 

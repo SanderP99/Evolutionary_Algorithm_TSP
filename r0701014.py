@@ -266,7 +266,7 @@ class r0701014:
         self.tour_size = data.shape[0]
         self.raw_distance_matrix = RawArray(ctypes.c_double, self.tour_size * self.tour_size)
 
-        self.distance_matrix = np.frombuffer(self.raw_distance_matrix, dtype=np.float64)\
+        self.distance_matrix = np.frombuffer(self.raw_distance_matrix, dtype=np.float64) \
             .reshape(self.tour_size, self.tour_size)
         np.copyto(self.distance_matrix, data)
 
@@ -285,17 +285,18 @@ class r0701014:
             population, scores = self.eliminate_duplicate_individuals(population, scores)
             population, scores = self.elitism(population, scores)
 
-            self.update_scores(population[0], scores)
-
             if self.same_best_objective % 20 == 0 and self.same_best_objective != 0:
                 if self.same_best_objective > 40:
                     break
                 self.use_random_initialization = True
                 population = self.initialize_population()
                 population[0] = self.best_solution
+                scores = self.length(population)
 
             if self.mean_objective != np.inf:
                 self.alpha = (0.2 * self.mean_objective / (self.best_objective + self.mean_objective))
+
+            self.update_scores(population[0], scores)
 
             time_left = self.reporter.report(
                 self.mean_objective, self.best_objective, self.best_solution
@@ -875,15 +876,12 @@ class r0701014:
         :return: Returns the new population and the respective scores.
         """
         new_population = np.zeros([self.population_size, self.tour_size], dtype=np.int)
-        perm = np.argsort(objective_values)
-        sorted_population = joined_population[perm]
-        sorted_objective_values = objective_values[perm]
-        new_population[0] = sorted_population[0]
+        new_population[0] = joined_population[0]
         for i in range(self.population_size - 1, 0, -1):
-            if sorted_objective_values[i] == sorted_objective_values[i - 1]:
+            if objective_values[i] == objective_values[i - 1]:
                 new_population[i] = self.greedy_randomized_algorithm()
             else:
-                new_population[i] = sorted_population[i]
+                new_population[i] = joined_population[i]
         new_scores = self.length(new_population)
         return new_population, new_scores
 
@@ -906,9 +904,7 @@ class r0701014:
             return np.vstack(result)
         else:
             random_numbers = np.random.random(population.shape[0])
-            random_numbers[
-                0
-            ] = 1  # Always perform local search on the fittest individual
+            random_numbers[0] = 1  # Always perform local search on the fittest individual
             population_to_search = population[
                 random_numbers > self.percentage_local_search
                 ]
