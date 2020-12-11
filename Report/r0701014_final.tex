@@ -114,7 +114,7 @@ When the algorithm gets trapped in a (local) optimum, it will restart itself by 
 \ReplaceMe{Which selection operators did you implement? If they are not from the slides, describe them. Can you motivate why you chose this one? Are there parameters that need to be chosen? Did you use an advanced scheme to vary these parameters throughout the iterations? Did you try other selection operators not included in the final version? Why did you discard them?}
 
 The following selection operators were implemented: k-tournament selection, linear rank based selection and roulette wheel selection with geometric decaying selection pressure. Some of these selection operators depend on parameters chosen by the user. For k-tournament this parameter is $k$, the number of individuals to be randomly selected for the tournament. The roulette wheel selection depends on the starting selection pressure and the decay for this selection pressure. The linear rank based selection does not need any parameters to be chosen.\\
-The final version of the evolutionary algorithm uses the roulette wheel selection with geometric decay. By doing a hyperparameter search, as described in section \ref{sec:hyperparameter}, the values of the starting selection pressure and the decay are set to \ReplaceMe{x and y} respectively. The generation of individuals in this operator is not done using inverse transform sampling, as this would require $\mathcal{O}(n)$ time per sample. Instead the Vose's alias method is used as explained by Schwarz \cite{schwarz, vose}. This method is able to sample in constant time, but uses $\mathcal{O}(n)$ time to initialize. This initialization can be reused to select all the individuals during the current generation.\\
+The final version of the evolutionary algorithm uses the roulette wheel selection with geometric decay. By doing a hyperparameter search, as described in section \ref{sec:hyperparameter}, the values of the starting selection pressure and the decay are both set to 0.999. This value was set when the entire algorithm was finished based on the number of iterations were typically needed in order to reach convergence. The generation of individuals in this operator is not done using inverse transform sampling, as this would require $\mathcal{O}(n)$ time per sample. Instead the Vose's alias method is used as explained by Schwarz \cite{schwarz, vose}. This method is able to sample in constant time, but uses $\mathcal{O}(n)$ time to initialize. This initialization can be reused to select all the individuals during the current generation.\\
 A fitness proportionate selection scheme was briefly introduced but discarded due to the problems mentioned in the slides.
 
 \subsection{Mutation operators} \label{sec:mutation}
@@ -227,9 +227,11 @@ Elitism is used to stop the algorithm from diverging from the optimal value. If 
 
 Report the main characteristics of the computer system on which you ran your evolutionary algorithm. Include the processor or CPU (including the number of cores and clock speed), the amount of main memory, and the version of Python 3.}
 
-All experiments conducted in this section are done using the same parameter values. The parameters that have a fixed value can be found in Table \ref{table:experiments} and the dynamic parameters take the values specified in section \ref{sec:evolutionary algorithm}.
+All experiments conducted in this section are done using the same parameter values. The parameters that have a fixed value can be found in Table \ref{table:experiments} and the dynamic parameters take the values specified in section \ref{sec:evolutionary algorithm}. The operators used are: roulette wheel selection, OX for recombination, RSM for mutation, parallel 3-opt for local search and duplicate individual removal as diversity promotion scheme.\\
 
-\begin{table}
+All numeric experiments were performed on a 64-bit version of Ubuntu 20.04 with a quad-core Intel i5-7300U @ 2.60 GHz and 16 GB of memory. Python version 3.8.5 was used.
+
+\begin{table}[h]
 \begin{center}
 \caption{Static parameters used in the numerical experiments}
 \label{table:experiments}
@@ -237,15 +239,13 @@ All experiments conducted in this section are done using the same parameter valu
 \rowcolor[HTML]{C0C0C0}
 Parameter	& Value		& Parameter	& Value \\ \hline
 Population size $\lambda$	&16 	&Offspring size $\mu$	&50 \\
-Number of nearest neighbors	& 15	& Selection pressure	& 0.99 \\
-Margin $\sigma$ in greedy diversification	&0.10	&Selection pressure decay	&0.99 \\
+Number of nearest neighbors	& 15	& Selection pressure	& 0.999 \\
+Margin $\sigma$ in greedy diversification	&0.10	&Selection pressure decay	&0.999 \\
 \hline
 \end{tabular}
 \end{center}
 \end{table}
 
-
-All numeric experiments were performed on a 64-bit version of Ubuntu 20.04 with a quad-core Intel i5-7300U @ 2.60 GHz and 16 GB of memory. Python version 3.8.5 was used.
 
 \subsection{tour29.csv}
 
@@ -255,13 +255,26 @@ What is the best tour length you found? What is the corresponding sequence of ci
 
 Interpret your results. How do you rate the performance of your algorithm (time, memory, speed of convergence, diversity of population, quality of the best solution, etc)? Is your solution close to the optimal one?
 
-Solve this problem 1000 times and record the results. Make a histogram of the final mean fitnessess and the final best fitnesses of the 1000 runs. Comment on this figure: is there a lot of variability in the results, what are the means and the standard deviations?}
+Solve this problem 1000 times and record the results. Make a histogram of the final mean fitnesses and the final best fitnesses of the 1000 runs. Comment on this figure: is there a lot of variability in the results, what are the means and the standard deviations?}
+
+In Figure \ref{fig:graphs} the convergence graph of this problem can be found in the top left hand corner. Since the heuristic value is a good approximation for the optimal solution, it converges quickly. The restarting points are clearly visible in the mean objective values. Because of these large values a plot with only the convergence of the best objective value has been added in Figure \ref{fig:best}.\\
+The solution found is the global optimal solution for this instance. The corresponding sequence is:
+$$14,11,10,9,5,0,1,4,7,3,2,6,8,12,13,15,23,24,26,19,25,27,28,22,21,20,16,17,18$$
+It finds this solution very quickly. In Figure \ref{fig:best}, it can clearly be seen that the optimal solution is found around generation 25, after approximately 2 seconds. It is also very memory efficient since all the operations happen in place. In Figure \ref{fig:memory} the results of the memory profiling can be seen for the duration of the algorithm. The blue brackets mark the start and the end of the optimize function call. Since the results of the bigger tours show similar results, apart from the height of the plateau, these graphs will be omitted.\\
+The algorithm will generate a different solution each time it is executed due to the random effects present. To study the variations in the solutions, the problem has been solved 1000 times. A histogram of the mean and best objective values is shown in Figure \ref{fig:histogram}. Note that the left-most bin of the best objective value extends up to 890, but the view of the plot has been restricted to 80 in order to make the other bins visible. The averages of the mean and best values are 29737 and 27206 respectively, while the standard deviations are 731 and 157.
+
+\begin{figure}
+\centering
+\includegraphics[scale=0.7]{../memory_usage_crop.png}
+\caption{Memory profiling of the \texttt{optimize} routine for \texttt{tour29}.}
+\label{fig:memory}
+\end{figure}
 
 \begin{figure}
 \centering
 \input{../histogram.pgf}
 \caption{Histogram of the mean and best objective values of 1000 runs of the \texttt{tour29} problem instance.}
-\label{fig:graphs}
+\label{fig:histogram}
 \end{figure}
 
 \subsection{tour100.csv}
@@ -272,6 +285,9 @@ What is the best tour length you found in each case?
 
 Interpret your results. How do you rate the performance of your algorithm (time, memory, speed of convergence, diversity of population, quality of the best solution, etc)? Is your solution close to the optimal one?}
 
+Just like the convergence graph of \texttt{tour29}, the convergence graph of \texttt{tour100} can be found on Figure \ref{fig:graphs} and a clearer view of the best value on Figure \ref{fig:best}. Note that the mean objective value shows some incontinuities due to the disconnected cities. The algorithm does not explicitly take these disconnections into account, but rather treats it as a edge with an infinitely high distance. Therefore the recombination and mutation operators are able to create tours with an infinite length. This does not form a problem for the best solution since the elimination and selection schemes will filter these results out.\\
+The solution found is only 1\% longer than the optimal value specified in the project description and this optimal value is an estimation in itself. So it could well be that the solution found is even more optimal. The solution is also found well within the time limit (after around 30 seconds). 
+
 \subsection{tour194.csv}
 
 \ReplaceMe{Run your algorithm on this benchmark problem (with the 5 minute time limit from the Reporter). Include a typical convergence graph, by plotting the mean and best objective values in function of the time (for example based on the output of the Reporter class). 
@@ -279,6 +295,8 @@ Interpret your results. How do you rate the performance of your algorithm (time,
 What is the best tour length you found? 
 
 Interpret your results. How do you rate the performance of your algorithm (time, memory, speed of convergence, diversity of population, quality of the best solution, etc)? Is your solution close to the optimal one?}
+
+Just like the convergence graph of \texttt{tour29}, the convergence graph of \texttt{tour194} can be found on Figure \ref{fig:graphs} and a clearer view of the best value on Figure \ref{fig:best}. The various restart points are clearly visible in the mean objective value. This time the algorithm ran for the full time span given, but the final solution was already found after approximately 100 seconds. The solution found here belongs in the top 20\% of all students on the leaderboard (at the time of writing). This shows that the solution found is a good solution for this problem.
 
 \subsection{tour929.csv}
 
@@ -290,18 +308,20 @@ Interpret your results. How do you rate the performance of your algorithm (time,
 
 Did your algorithm converge before the time limit? How many iterations did you perform?}
 
-\begin{figure}
+Just like the convergence graph of \texttt{tour29}, the convergence graph of \texttt{tour929} can be found on Figure \ref{fig:graphs} and a clearer view of the best value on Figure \ref{fig:best}. The final best solution had a length of 102637.963, but the algorithm had not yet converged after five minutes and 135 generations. This solution is 7\% longer than the optimal value specified in the project description. But this is again an estimation, thus the difference can be smaller as well. The best value this algorithm was able to produce without a time limit was \ReplaceMe{x} in \ReplaceMe{y} generations.
+
+\begin{figure}[p]
 \centering
 \rotatebox{270}{\input{../graphs.pgf}}
 \caption{Convergence graphs of the different benchmark tours.}
 \label{fig:graphs}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[p]
 \centering
 \rotatebox{270}{\input{../best.pgf}}
 \caption{Convergence graphs of the best objective values of the different benchmark tours.}
-\label{fig:graphs}
+\label{fig:best}
 \end{figure}
 
 \section{Critical reflection}

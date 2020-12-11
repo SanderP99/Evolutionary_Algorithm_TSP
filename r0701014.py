@@ -1129,7 +1129,7 @@ class r0701014:
         too quickly.
         """
         if self.selection_function == self.selection_roulette_wheel:
-            self.selection_pressure = 0.99
+            self.selection_pressure = 0.999
             self.selection_pressure_decay = self.selection_pressure
         else:
             self.selection_pressure = 0.01
@@ -1226,4 +1226,4 @@ class r0701014:
 #                  local])
 
 TSP = r0701014()
-TSP.optimize("tour194.csv")
+TSP.optimize("tour100.csv")
