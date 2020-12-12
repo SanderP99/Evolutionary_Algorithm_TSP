@@ -107,7 +107,7 @@ An individual is represented as a 1D \pyth{numpy} array with the order of the vi
 \ReplaceMe{How do you initialize the population? How did you determine the number of individuals? Did you implement advanced initialization mechanisms (local search operators, heuristic solutions)? If so, describe them. Do you believe your approach maintains sufficient diversity? How do you ensure that your population enrichment scheme does not immediately take over the population? Did you implement other initialization schemes that did not make it to the final version? Why did you discard them? How did you determine the population size?}
 
 The population is initialized by using a greedy algorithm. The algorithm starts in a node and picks the nearest not visited node as the next node. The starting points are decided at random. This is a variation on all nearest neighbors (ANN) as proposed by Kaabi and Harrath \cite{ann}. This heuristic method creates less diversity than random initialization. Therefore a diversity promotion scheme is implemented and described in section \ref{sec:diversity}. The random initialization method is still available by setting the boolean value of \texttt{use\_random\_initialization} to true. This version explores more of the search space, but it will never reach the the objective value of the heuristic solution for the bigger problems in the given time span.\\
-When the algorithm gets trapped in a (local) optimum, it will restart itself by setting half of its population to a new random population. These new individuals can then recombine with the original individuals to escape the optimum.
+When the algorithm gets trapped in a (local) optimum, it will restart itself by initializing a new random population. These individuals are created using the random nearest insertion heuristic \cite{rni} and can then recombine with the original individuals to escape the optimum. This heuristic uses a random sequence of nodes and inserts it into an existing sequence whilst keeping the total length minimal.
 
 \subsection{Selection operators}
 
@@ -136,7 +136,8 @@ Since OX and SCX respect the relative order of nodes in the parents, these will 
 
 \ReplaceMe{Which elimination operators did you implement? If they are not from the slides, describe them. Why did you select this one? Are there parameters that need to be chosen? Did you use an advanced scheme to vary these parameters throughout the iterations? Did you try other elimination operators not included in the final version? Why did you discard them?} 
 
-The only elimination scheme implemented is $(\lambda + \mu)$-elimination, which was created in the group phase. Since it is not guaranteed that the offspring will be better than the previous generation, this is the best option. To make sure that the best objective value will not diverge, elitism is applied to the population after elimination. This is described in section \ref{sec:other}.
+The only elimination scheme implemented is $(\lambda + \mu)$-elimination, which was created in the group phase. Since it is not guaranteed that the offspring will be better than the previous generation, this is the best option. To make sure that the best objective value will not diverge, elitism is applied to the population after elimination. This is described in section \ref{sec:other}.\\
+The selection operators k-tournament and roulette wheel selection were also tested as elimination schemes, but the results of these proved worse than the $(\lambda + \mu)$-elimination. This was probably the case due to the time limit, because the selection operators had a higher diversity. This diversity caused that the algorithm was not able to converge as quickly.
 
 \subsection{Local search operators}
 
@@ -165,10 +166,10 @@ During the development phase, a combination of two criteria was used. The first 
 
 \ReplaceMe{Describe the main loop of your evolutionary algorithm using a clear picture (preferred) or high-level pseudocode. In what order do you apply the various operators? Why that order? If you are using several selection, mutation, recombination, elimination, and local search operators, describe how you choose among the possibilities. Are you selecting/eliminating all individuals in parallel, or one by one? With or without replacement?}
 
-Before the main loop starts, some parameters that depend on the tour size are initialized. The offspring is generated in the \texttt{recombination} function. In there the individuals are selected with replacement in parallel. Afterwards all parents and children are supplied to the \texttt{mutation} function. This function applies mutation with a given probability $\alpha$ specified in section \ref{sec:mutation}. Then the local search operator is applied on half of these individuals. Elimination and diversification is then applied to the optimized population. The next part is 'restarting' the algorithm if there is a risk of settling in a local minimum. Finally the results of this generation is reported to the reporter and the loop is restarted. The main loop can be seen in Figure \ref{code:main}.
+Before the main loop starts, some parameters that depend on the tour size are initialized. The offspring is generated in the \texttt{recombination} function. In there the individuals are selected with replacement in parallel. Afterwards all parents and children are supplied to the \texttt{mutation} function. This function applies mutation with a given probability $\alpha$ specified in section \ref{sec:mutation}. Then the local search operator is applied on half of these individuals. Elimination and diversification is then applied to the optimized population. The next part is 'restarting' the algorithm if there is a risk of settling in a local minimum. Finally the results of this generation are reported to the reporter and the loop is restarted. The main loop can be seen in Figure \ref{code:main}.
 
 \begin{figure}
-\inputpython{../r0701014.py}{258}{305}
+\inputpython{../r0701014.py}{258}{307}
 \caption{The main loop of the evolutionary algorithm}
 \label{code:main}
 \end{figure}
@@ -227,7 +228,7 @@ Elitism is used to stop the algorithm from diverging from the optimal value. If 
 
 Report the main characteristics of the computer system on which you ran your evolutionary algorithm. Include the processor or CPU (including the number of cores and clock speed), the amount of main memory, and the version of Python 3.}
 
-All experiments conducted in this section are done using the same parameter values. The parameters that have a fixed value can be found in Table \ref{table:experiments} and the dynamic parameters take the values specified in section \ref{sec:evolutionary algorithm}. The operators used are: roulette wheel selection, OX for recombination, RSM for mutation, parallel 3-opt for local search and duplicate individual removal as diversity promotion scheme.\\
+All experiments conducted in this section are done using the same parameter values. The parameters that have a fixed value can be found in Table \ref{table:experiments} and the dynamic parameters take the values specified in section \ref{sec:evolutionary algorithm}. The operators used are: roulette wheel selection, OX for recombination, RSM for mutation, parallel 3-opt for local search and duplicate individual removal as diversity promotion scheme. All problem instances were run for five minutes, but for the view of the graphs has been limited to 30 generations after the best objective value had been found.\\
 
 All numeric experiments were performed on a 64-bit version of Ubuntu 20.04 with a quad-core Intel i5-7300U @ 2.60 GHz and 16 GB of memory. Python version 3.8.5 was used.
 
