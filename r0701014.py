@@ -285,11 +285,12 @@ class r0701014:
             population, scores = self.eliminate_duplicate_individuals(population, scores)
             population, scores = self.elitism(population, scores)
 
-            if self.same_best_objective % 20 == 0 and self.same_best_objective != 0:
-                if self.same_best_objective > 40:
-                    break
-                self.use_random_initialization = True
-                population = self.initialize_population()
+            if self.same_best_objective % 30 == 0 and self.same_best_objective != 0:
+                # if self.same_best_objective > 40:
+                #     break
+                # self.use_random_initialization = True
+                self.selection_pressure = 0.8
+                population = self.random_nearest_insertion()
                 population[0] = self.best_solution
                 scores = self.length(population)
 
@@ -406,13 +407,38 @@ class r0701014:
             population[i] = individual
         return population
 
+    def random_nearest_insertion(self) -> np.array:
+        random_population = self.random_population(self.population_size)
+        new_population = np.empty([self.population_size, self.tour_size], dtype=np.int32)
+        for i in range(self.population_size):
+            new_individual = np.array([], dtype=np.int32)
+            for j in random_population[i]:
+                new_individual = self.nearest_insertion(new_individual, j)
+            new_population[i] = new_individual
+        return new_population
+
+    def nearest_insertion(self, individual, n):
+        if individual.size < 2:
+            return np.append(individual, n)
+        else:
+            shortest_length = self.distance_matrix[individual[0]][n] + self.distance_matrix[n][individual[1]]
+            shortest_index = 1
+            for i in range(2, individual.size):
+                new_length = self.distance_matrix[individual[i - 1]][n] + self.distance_matrix[n][
+                    individual[i % self.tour_size]]
+                if new_length < shortest_length:
+                    shortest_length = new_length
+                    shortest_index = i
+            return np.insert(individual, shortest_index, n)
+
     ###############
     #  SELECTION  #
     ###############
 
-    def selection_k_tournament(self, population: np.array, n: int = 1) -> np.array:
+    def selection_k_tournament(self, population: np.array, n: int = 1, replace: bool = True) -> np.array:
         """
         Performs a k-tournament selection on the population supplied. The k value used is the one provided in self.k.
+        :param replace: True if the sampling should happen with replacement, this is the standard value.
         :param population: The population to select individuals from.
         :param n: The number of individuals to select
         :return: Returns n individuals in a numpy array
@@ -420,7 +446,7 @@ class r0701014:
         selection = np.empty((n, self.tour_size), dtype=np.int)
         for i in range(n):
             individuals = population[
-                          np.random.choice(self.population_size, self.k, replace=True), :
+                          np.random.choice(self.population_size, self.k, replace=replace), :
                           ]
             objective_values = self.length(individuals)
             perm = np.argsort(objective_values)
@@ -1226,4 +1252,4 @@ class r0701014:
 #                  local])
 
 TSP = r0701014()
-TSP.optimize("tour100.csv")
+TSP.optimize("tour929.csv")
