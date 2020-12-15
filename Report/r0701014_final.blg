@@ -4,45 +4,45 @@ The top-level auxiliary file: r0701014_final.aux
 The style file: unsrt.bst
 Database file #1: mybib.bib
 Warning--empty booktitle in hprm
-You've used 14 entries,
+You've used 15 entries,
             1791 wiz_defined-function locations,
-            536 strings with 5913 characters,
-and the built_in function-call counts, 3101 in all, are:
-= -- 295
-> -- 99
+            540 strings with 6024 characters,
+and the built_in function-call counts, 3219 in all, are:
+= -- 303
+> -- 103
 < -- 3
-+ -- 40
-- -- 26
-* -- 155
-:= -- 463
-add.period$ -- 46
-call.type$ -- 14
-change.case$ -- 14
++ -- 42
+- -- 27
+* -- 156
+:= -- 480
+add.period$ -- 48
+call.type$ -- 15
+change.case$ -- 15
 chr.to.int$ -- 0
-cite$ -- 15
-duplicate$ -- 165
-empty$ -- 320
-format.name$ -- 26
-if$ -- 739
+cite$ -- 16
+duplicate$ -- 170
+empty$ -- 338
+format.name$ -- 27
+if$ -- 767
 int.to.chr$ -- 0
-int.to.str$ -- 14
+int.to.str$ -- 15
 missing$ -- 11
-newline$ -- 74
-num.names$ -- 14
-pop$ -- 48
+newline$ -- 78
+num.names$ -- 15
+pop$ -- 55
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 0
-skip$ -- 105
+skip$ -- 109
 stack$ -- 0
 substring$ -- 154
-swap$ -- 58
+swap$ -- 59
 text.length$ -- 3
 text.prefix$ -- 0
 top$ -- 0
 type$ -- 0
 warning$ -- 1
-while$ -- 23
-width$ -- 16
-write$ -- 159
+while$ -- 24
+width$ -- 17
+write$ -- 167
 (There was 1 warning)

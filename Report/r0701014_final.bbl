@@ -25,6 +25,10 @@ Michael~D. Vose.
   distribution.
 \newblock {\em Software Engineering, IEEE Transactions on}, 1991.
 
+\bibitem{slides}
+Nick Vannieuwenhoven.
+\newblock Genetic algorithms and evolutionary computing, 2020.
+
 \bibitem{hprm}
 Abdoun Otman, Chakir Tajani, and Jaafar Abouchabka.
 \newblock A new mutation operator for solving an np-complete problem:
