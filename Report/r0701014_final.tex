@@ -42,30 +42,30 @@
 
 \maketitle
 
-\section{\RemoveMe{Formal requirements}} \label{sec_this}
+%\section{\RemoveMe{Formal requirements}} \label{sec_this}
 
-\RemoveMe{The report is structured for fair and efficient grading of over 100 individual projects in the space of only a few days. Please respect the exact structure of this document. You are allowed to remove sections \ref{sec_this} and \ref{sec_other}. Brevity is the soul of wit: a good report will be \textbf{around $7$ pages} long. The hard limit is 10 pages. 
+%\RemoveMe{The report is structured for fair and efficient grading of over 100 individual projects in the space of only a few days. Please respect the exact structure of this document. You are allowed to remove sections \ref{sec_this} and \ref{sec_other}. Brevity is the soul of wit: a good report will be \textbf{around $7$ pages} long. The hard limit is 10 pages. 
 
-It is recommended that you use this \LaTeX{} template, but you are allowed to reproduce it with the same structure in a WYSIWYG-editor. The purple text containing our evaluation criteria can be removed. You should replace the blue text with your discussion. \textbf{The questions we ask in blue are there to guide which topics to discuss}, rather than an exact list of questions that must be answered. Feel free to add more items to discuss.
+%It is recommended that you use this \LaTeX{} template, but you are allowed to reproduce it with the same structure in a WYSIWYG-editor. The purple text containing our evaluation criteria can be removed. You should replace the blue text with your discussion. \textbf{The questions we ask in blue are there to guide which topics to discuss}, rather than an exact list of questions that must be answered. Feel free to add more items to discuss.
 
-This report should be uploaded to Toledo by \deadlineReport. It must be in the \textbf{Portable Document Format} (pdf) and must be named \texttt{r0123456\_intermediate.pdf}, where r0123456 should be replaced with your student number.}
+%This report should be uploaded to Toledo by \deadlineReport. It must be in the \textbf{Portable Document Format} (pdf) and must be named \texttt{r0123456\_intermediate.pdf}, where r0123456 should be replaced with your student number.}
 
 \section{Metadata}
 
 \begin{itemize}
  \item \textbf{Group members during group phase:} Karel Everaert and Matthias Maeyens
  \item \textbf{Time spent on group phase:} 15 hours
- \item \textbf{Time spent on final code:} \ReplaceMe{40 hours}
+ \item \textbf{Time spent on final code:} 78 hours
  \item \textbf{Time spent on final report:} \ReplaceMe{10 hours}
 \end{itemize}
 
 \section{Modifications since the group phase}
 
-\RemoveMe{\textbf{Goal:} Based on this section, we will evaluate insofar as you are able to analyse common problems arising in the design and implementation of evolutionary algorithms and your ability to effectively solve them.}
+%\RemoveMe{\textbf{Goal:} Based on this section, we will evaluate insofar as you are able to analyse common problems arising in the design and implementation of evolutionary algorithms and your ability to effectively solve them.}
 
 \subsection{Main improvements}
 
-\ReplaceMe{List the main changes that you implemented since the group phase. You do not need to explain the employed techniques in detail; for this, you should refer to the appropriate subsection of section 4 of the report.}
+%\ReplaceMe{List the main changes that you implemented since the group phase. You do not need to explain the employed techniques in detail; for this, you should refer to the appropriate subsection of section 4 of the report.}
 
 \paragraph{Initialization of the population:}A greedy heuristic was used to initialize the population in order to start from a fitter population than the random population used in the group phase.
 
@@ -80,7 +80,7 @@ This report should be uploaded to Toledo by \deadlineReport. It must be in the \
 
 
 \subsection{Issues resolved}
-\ReplaceMe{Recall the list of issues from the group phase. Describe how you solved these issues in the individual phase.}
+%\ReplaceMe{Recall the list of issues from the group phase. Describe how you solved these issues in the individual phase.}
 
 \paragraph{Mutation:} The mutation operator used in the group phase had little on larger problem sizes. A number of different mutation operators were implemented to cope with this problem.
 
@@ -92,26 +92,26 @@ This report should be uploaded to Toledo by \deadlineReport. It must be in the \
 
 \section{Final design of the evolutionary algorithm}  \label{sec:evolutionary algorithm}
 
-\RemoveMe{\textbf{Goal:} Based on this section, we will evaluate insofar as you are able to design and implement an advanced, effective evolutionary algorithm for solving a model problem.}
+%\RemoveMe{\textbf{Goal:} Based on this section, we will evaluate insofar as you are able to design and implement an advanced, effective evolutionary algorithm for solving a model problem.}
 
-\ReplaceMe{In this section, you should describe all components of your final evolutionary algorithm and how they fit together.}
+%\ReplaceMe{In this section, you should describe all components of your final evolutionary algorithm and how they fit together.}
 
 \subsection{Representation}
 
-\ReplaceMe{How do you represent the candidate solutions? What is your motivation to choose this one? What other options did you consider? How did you implement this specifically in Python (e.g., a list, set, numpy array, etc)?}
+%\ReplaceMe{How do you represent the candidate solutions? What is your motivation to choose this one? What other options did you consider? How did you implement this specifically in Python (e.g., a list, set, numpy array, etc)?}
 
 An individual is represented as a 1D \pyth{numpy} array with the order of the visited nodes. A \pyth{numpy} array is used rather than a plain python list, because of the more efficient manner in which these arrays get stored in memory and the vectorized operations that are available in the \pyth{numpy} library. A population is represented as a two dimensional array (each row is an individual). This choice was made for the same reasons as mentioned above. Since duplicate individuals are allowed a set can not be used. This type of collection is also unordered which would require more computations.
 
 \subsection{Initialization}
 
-\ReplaceMe{How do you initialize the population? How did you determine the number of individuals? Did you implement advanced initialization mechanisms (local search operators, heuristic solutions)? If so, describe them. Do you believe your approach maintains sufficient diversity? How do you ensure that your population enrichment scheme does not immediately take over the population? Did you implement other initialization schemes that did not make it to the final version? Why did you discard them? How did you determine the population size?}
+%\ReplaceMe{How do you initialize the population? How did you determine the number of individuals? Did you implement advanced initialization mechanisms (local search operators, heuristic solutions)? If so, describe them. Do you believe your approach maintains sufficient diversity? How do you ensure that your population enrichment scheme does not immediately take over the population? Did you implement other initialization schemes that did not make it to the final version? Why did you discard them? How did you determine the population size?}
 
 The population is initialized by using a greedy algorithm. The algorithm starts in a node and picks the nearest not visited node as the next node. The starting points are decided at random. This is a variation on all nearest neighbors (ANN) as proposed by Kaabi and Harrath \cite{ann}. This heuristic method creates less diversity than random initialization. Therefore a diversity promotion scheme is implemented and described in section \ref{sec:diversity}. The random initialization method is still available by setting the boolean value of \texttt{use\_random\_initialization} to true. This version explores more of the search space, but it will never reach the the objective value of the heuristic solution for the bigger problems in the given time span.\\
 When the algorithm gets trapped in a (local) optimum, it will restart itself by initializing a new random population. These individuals are created using the random nearest insertion heuristic \cite{rni} and can then recombine with the original individuals to escape the optimum. This heuristic uses a random sequence of nodes and inserts it into an existing sequence whilst keeping the total length minimal.
 
 \subsection{Selection operators}
 
-\ReplaceMe{Which selection operators did you implement? If they are not from the slides, describe them. Can you motivate why you chose this one? Are there parameters that need to be chosen? Did you use an advanced scheme to vary these parameters throughout the iterations? Did you try other selection operators not included in the final version? Why did you discard them?}
+%\ReplaceMe{Which selection operators did you implement? If they are not from the slides, describe them. Can you motivate why you chose this one? Are there parameters that need to be chosen? Did you use an advanced scheme to vary these parameters throughout the iterations? Did you try other selection operators not included in the final version? Why did you discard them?}
 
 The following selection operators were implemented: k-tournament selection, linear rank based selection and roulette wheel selection with geometric decaying selection pressure. Some of these selection operators depend on parameters chosen by the user. For k-tournament this parameter is $k$, the number of individuals to be randomly selected for the tournament. The roulette wheel selection depends on the starting selection pressure and the decay for this selection pressure. The linear rank based selection does not need any parameters to be chosen.\\
 The final version of the evolutionary algorithm uses the roulette wheel selection with geometric decay. By doing a hyperparameter search, as described in section \ref{sec:hyperparameter}, the values of the starting selection pressure and the decay are both set to 0.999. This value was set when the entire algorithm was finished based on the number of iterations were typically needed in order to reach convergence. The generation of individuals in this operator is not done using inverse transform sampling, as this would require $\mathcal{O}(n)$ time per sample. Instead the Vose's alias method is used as explained by Schwarz \cite{schwarz, vose}. This method is able to sample in constant time, but uses $\mathcal{O}(n)$ time to initialize. This initialization can be reused to select all the individuals during the current generation.\\
@@ -119,29 +119,29 @@ A fitness proportionate selection scheme was briefly introduced but discarded du
 
 \subsection{Mutation operators} \label{sec:mutation}
 
-\ReplaceMe{Which mutation operators did you implement? If they are not from the slides, describe them. How do you choose among several mutation operators? Do you believe it will introduce sufficient randomness? Can that be controlled with parameters? Do you use self-adaptivity? Do you use any other advanced parameter control mechanisms (e.g., variable across iterations)? Did you try other mutation operators not included in the final version? Why did you discard them?}
+%\ReplaceMe{Which mutation operators did you implement? If they are not from the slides, describe them. How do you choose among several mutation operators? Do you believe it will introduce sufficient randomness? Can that be controlled with parameters? Do you use self-adaptivity? Do you use any other advanced parameter control mechanisms (e.g., variable across iterations)? Did you try other mutation operators not included in the final version? Why did you discard them?}
 
-The mutation operator that existed in the group phase, the sequence swap operator, was simplified to a simple swap operator that swaps two nodes at random. This operator had little effect on larger problem instances due to its proportionally small range. Therefore three different operators were introduced: reverse sequence mutation (RSM), partial shuffle mutation (PSM) and a hybrid of the two called hybridizing PSM RSM mutation (HPRM) \cite{hprm}.\\
+The mutation operator that existed in the group phase, the sequence swap operator, was simplified to a simple swap operator that swaps two nodes at random. This operator had little effect on larger problem instances due to its proportionally small range. Therefore three different operators were introduced: reverse sequence mutation (RSM), partial shuffle mutation (PSM) and a hybrid of the two called hybridizing PSM RSM mutation (HPRM)~\cite{hprm}.\\
 RSM chooses two nodes in the individual at random and reverses the sequence between the two nodes. PSM is similar but randomly shuffles the sequence between the nodes, thus introducing more randomness. HPRM is a combination of the two where the sequence between the nodes is reversed element-wise and shuffled after each reversion.\\
 All the operators discussed cannot be controlled by a parameter to tune the amount of randomness they introduce. The final evolutioanry algorithm uses RSM because it proved the best in the numerical experiments. The operator is applied with a probability $\alpha$ to an individual, with $\alpha = 0.2 *\frac{ \textit{mean objective}}{\textit{mean objective } + \textit{ best objective}}$. This idea is based on the idea from Kaabi and Harrath \cite{ann}. 
 
 \subsection{Recombination operators}
 
-\ReplaceMe{Which recombination operators did you implement? If they are not from the slides, describe them. How do you choose among several recombination operators? Why did you choose these ones specifically? Explain how you believe that these operators can produce offspring that combine the best features from their parents. How does your operator behave if there is little overlap between the parents? Can your recombination be controlled with parameters; what behavior do they change? Do you use self-adaptivity? Do you use any other advanced parameter control mechanisms (e.g., variable across iterations)? Did you try other recombination operators not included in the final version? Why did you discard them? Did you consider recombination with arity strictly greater than 2?}
+%\ReplaceMe{Which recombination operators did you implement? If they are not from the slides, describe them. How do you choose among several recombination operators? Why did you choose these ones specifically? Explain how you believe that these operators can produce offspring that combine the best features from their parents. How does your operator behave if there is little overlap between the parents? Can your recombination be controlled with parameters; what behavior do they change? Do you use self-adaptivity? Do you use any other advanced parameter control mechanisms (e.g., variable across iterations)? Did you try other recombination operators not included in the final version? Why did you discard them? Did you consider recombination with arity strictly greater than 2?}
 
 The recombination operator implemented during the group phase, partially mapped crossover (PMX), was kept. Two other recombination operators called order crossover (OX) and sequential constructive crossover (SCX) proposed by Davis \cite{davis} and Ahmed \cite{ahmed}. All three operators start from the same principle, two crossover points are chosen at random in both parents. The nodes between these points are then copied to the offspring. How the rest of the nodes are copied differs between the operators. PMX tries to keep the positions of the nodes consistent by using cycles in the parents. OX copies the unused nodes from the parent of which the nodes between the crossover points have not been copied to the child. SCX searches in both parents to the next unused node and picks the one that is the nearest to the node previously inserted in the child. This operator thus only creates one child from two parents. Therefore double the number of recombinations are needed in order to generate the same number of offspring.\\
 Since OX and SCX respect the relative order of nodes in the parents, these will probably perform better than PMX on the asymmetric TSP. The experiments performed in section \ref{sec:hyperparameter} also show this. The final algorithm uses OX since it had better results on bigger problem instances. This operator guarantees that if an edge between two nodes is present in both parents, it will definitely be copied to the offspring. If there is little overlap between the parents, then the operator will practically copy half of both parents to the children. Due to the complexity of recombination operators on permutations operators with arity greater than two have not been considered. The operators themselves don't depend on any parameters. They just create the number of children specified in the \texttt{offsping\_size} variable.
 
 \subsection{Elimination operators}
 
-\ReplaceMe{Which elimination operators did you implement? If they are not from the slides, describe them. Why did you select this one? Are there parameters that need to be chosen? Did you use an advanced scheme to vary these parameters throughout the iterations? Did you try other elimination operators not included in the final version? Why did you discard them?} 
+%\ReplaceMe{Which elimination operators did you implement? If they are not from the slides, describe them. Why did you select this one? Are there parameters that need to be chosen? Did you use an advanced scheme to vary these parameters throughout the iterations? Did you try other elimination operators not included in the final version? Why did you discard them?} 
 
 The only elimination scheme implemented is $(\lambda + \mu)$-elimination, which was created in the group phase. Since it is not guaranteed that the offspring will be better than the previous generation, this is the best option. To make sure that the best objective value will not diverge, elitism is applied to the population after elimination. This is described in section \ref{sec:other}.\\
 The selection operators k-tournament and roulette wheel selection were also tested as elimination schemes, but the results of these proved worse than the $(\lambda + \mu)$-elimination. This was probably the case due to the time limit, because the selection operators had a higher diversity. This diversity caused that the algorithm was not able to converge as quickly.
 
 \subsection{Local search operators}
 
-\ReplaceMe{What local search operators did you implement? Describe them. Did they cause a significant improvement in the performance of your algorithm? Why (not)? Did you consider other local search operators that did not make the cut? Why did you discard them? Are there parameters that need to be determined in your operator? Do you use an advanced scheme to determine them (e.g., adaptive or self-adaptive)?}
+%\ReplaceMe{What local search operators did you implement? Describe them. Did they cause a significant improvement in the performance of your algorithm? Why (not)? Did you consider other local search operators that did not make the cut? Why did you discard them? Are there parameters that need to be determined in your operator? Do you use an advanced scheme to determine them (e.g., adaptive or self-adaptive)?}
 
 Three different local search operators where considered. All three operators are based on a neighborhood structure. The first one is a 3-opt method where a tour is seen as three different arcs (A-B-C). If the alternative A-C-B is shorter then this tour is kept. The second operator is a 2-opt operator. This operator swaps two neighboring nodes in an individual if it is shorter than the other way around. The last operator reverses the individual as a whole if it is shorter. This operator was not implemented since it would not have a big effect because of the way the distance matrix is generated.\\
 The final algorithm uses the 3-opt local search operator based on the one proposed by Kanellakis and Papadimitriou \cite{kanellakispapadimitriou} and improved by Bentley \cite{bentley} and Nagata and Soler \cite{nagatasoler}. Instead of splitting the tour in arcs in all possible places, a list of nearest neighbors is used for each node. Once a first splitting point is chosen, then the second point is limited by this list of nearest neighbors. This reduces the computations needed to perform the local search while still receiving a good improvement on the individual. To reduce the computations even further, the first splitting point is chosen at random. This makes that there is not always a better individual found using the operator, but if the individual makes it to the next generation then another random splitting point will be chosen. This approach proved experimentally better than doing a full 3-opt search on the individuals.\\
@@ -149,7 +149,7 @@ The only parameter that needs to be chosen is the number of nearest neighbors th
 
 \subsection{Diversity promotion mechanisms} \label{sec:diversity}
 
-\ReplaceMe{Did you implement a diversity promotion scheme? If yes, which one? If no, why not? Describe the mechanism you implemented. In what sense does the mechanism improve the performance of your evolutionary algorithm? Are there parameters that need to be determined? Did you use an advanced scheme to determine them?}
+%\ReplaceMe{Did you implement a diversity promotion scheme? If yes, which one? If no, why not? Describe the mechanism you implemented. In what sense does the mechanism improve the performance of your evolutionary algorithm? Are there parameters that need to be determined? Did you use an advanced scheme to determine them?}
 
 Two different diversity promotion schemes have been implemented. Fitness sharing in the elimination phase and the removal of duplicate individuals after elimination as proposed by Herrera-Poyatos and Herrera \cite{herrera}.\\
 Fitness sharing is implemented as described in the slides of this course. The distance function used is the number of edges that are different between two individuals. The computation of the distance function is very expensive and is therefore executed in parallel. This scheme needs a maximum distance $\sigma$ that will be considered in order to apply the penalties.\\
@@ -158,13 +158,13 @@ The final algorithm uses the greedy diversification option because it performed 
 
 \subsection{Stopping criterion}
 
-\ReplaceMe{Which stopping criterion did you implement? Did you combine several criteria?}
+%\ReplaceMe{Which stopping criterion did you implement? Did you combine several criteria?}
 
-During the development phase, a combination of two criteria was used. The first one was a limit on the number of generations (500 in this case) and the second one was the number of generations in which the best solutions had not changed. The former criterion was obsolete after for the larger problems due to the computationally expensive local search operator. Since the elitism scheme was used in the final version of the algorithm, the stopping criterion has been dropped in order to fully use the given time span.
+During the development phase, a combination of two criteria was used. The first one was a limit on the number of generations (500 in this case) and the second one was the number of generations in which the best solutions had not changed. Some trail-and-error showed that 30 was a good value for this. The former criterion was obsolete after for the larger problems due to the computationally expensive local search operator. Since the elitism scheme was used in the final version of the algorithm, the stopping criterion has been dropped in order to fully use the given time span.
 
 \subsection{The main loop}
 
-\ReplaceMe{Describe the main loop of your evolutionary algorithm using a clear picture (preferred) or high-level pseudocode. In what order do you apply the various operators? Why that order? If you are using several selection, mutation, recombination, elimination, and local search operators, describe how you choose among the possibilities. Are you selecting/eliminating all individuals in parallel, or one by one? With or without replacement?}
+%\ReplaceMe{Describe the main loop of your evolutionary algorithm using a clear picture (preferred) or high-level pseudocode. In what order do you apply the various operators? Why that order? If you are using several selection, mutation, recombination, elimination, and local search operators, describe how you choose among the possibilities. Are you selecting/eliminating all individuals in parallel, or one by one? With or without replacement?}
 
 Before the main loop starts, some parameters that depend on the tour size are initialized. The offspring is generated in the \texttt{recombination} function. In there the individuals are selected with replacement in parallel. Afterwards all parents and children are supplied to the \texttt{mutation} function. This function applies mutation with a given probability $\alpha$ specified in section \ref{sec:mutation}. Then the local search operator is applied on half of these individuals. Elimination and diversification is then applied to the optimized population. The next part is 'restarting' the algorithm if there is a risk of settling in a local minimum. Finally the results of this generation are reported to the reporter and the loop is restarted. The main loop can be seen in Figure \ref{code:main}.
 
@@ -177,7 +177,7 @@ Before the main loop starts, some parameters that depend on the tour size are in
 
 \subsection{Parameter selection} \label{sec:hyperparameter}
 
-\ReplaceMe{For all of the parameters that are not automatically determined by adaptivity or self-adaptivity (as you have described above), describe how you determined them. Did you perform a hyperparameter search? How did you do this? How did you determine these parameters would be valid both for small and large problem instances?}
+%\ReplaceMe{For all of the parameters that are not automatically determined by adaptivity or self-adaptivity (as you have described above), describe how you determined them. Did you perform a hyperparameter search? How did you do this? How did you determine these parameters would be valid both for small and large problem instances?}
 
 Tuning all parameters of an evolutionary algorithm is huge problem on its own. Therefore not all possible combinations of the parameters and operators were tested. The tuning process was split in multiple parts in order to decrease the time needed. The first part of this process was deciding the mutation and recombination operators out of the possibilities described in section \ref{sec:evolutionary algorithm}. All the different combinations of mutation and recombination operators were tested 20 times on the smallest tour. The most promising mutation operator were RSM and HPRM, but there was not a recombination operator that was significantly better. The remaining mutation operators and all recombination operators were then tested on \texttt{tour194.csv} in order to try create a more significant difference between the recombination operators. The experiment showed that OX and SCX performed similar whilst PMX performed a fraction worse. For the final evolutionary algorithm OX was chosen, because it typically needed less generations than SCX to converge. Note that during this experiment it was assumed that all operators had similar performance with the same parameters. This is normally not the case.\\
 
@@ -189,7 +189,7 @@ This larger problem instance is \texttt{tour194} and the parameters used are 16,
 \begin{figure}
 \centering
 \scalebox{.6}{\input{../nofreelunch.pgf}}
-\caption{Successes for different parameter values on \texttt{tour29}.}
+\caption{Number of successes for different parameter values on \texttt{tour29}.}
 \label{fig:hyperparameter}
 \end{figure}
 
@@ -209,7 +209,7 @@ $l$       & 0, 0.25, 0.5, 0.75, 1   \\ \hline
 
 \subsection{Other considerations} \label{sec:other}
 
-\ReplaceMe{Did you consider other items not listed above, such as elitism, multiobjective optimization strategies (e.g., island model, pareto front approximation), a parallel implementation, or other interesting computational optimizations (e.g. using advanced algorithms or data structures)? You can describe them here or add additional subsections as needed.}
+%\ReplaceMe{Did you consider other items not listed above, such as elitism, multiobjective optimization strategies (e.g., island model, pareto front approximation), a parallel implementation, or other interesting computational optimizations (e.g. using advanced algorithms or data structures)? You can describe them here or add additional subsections as needed.}
 
 Some operators, like the local search operator and the fitness sharing elimination, are computationally expensive. But the results of these operators don't depend on each other. Therefore these operators can be executed in parallel. To accomplish this a \texttt{RawArray} from \texttt{multiprocessing} is used for the distance matrix. This is a one dimensional array that cannot be locked, but this is not needed because the parallel processes will not alter the matrix.\\
 
@@ -220,13 +220,13 @@ Elitism is used to stop the algorithm from diverging from the optimal value. If 
 
 \section{Numerical experiments}
 
-\RemoveMe{\textbf{Goal:} Based on this section and our execution of your code, we will evaluate the performance (time, quality of solutions) of your implementation and your ability to interpret and explain the results on benchmark problems.}
+%\RemoveMe{\textbf{Goal:} Based on this section and our execution of your code, we will evaluate the performance (time, quality of solutions) of your implementation and your ability to interpret and explain the results on benchmark problems.}
 
 \subsection{Metadata}
 
-\ReplaceMe{What parameters are there to choose in your evolutionary algorithm? Which fixed parameter values did you use for all experiments below? If some parameters are determined based on information from the problem instance (e.g., number of cities), also report their specific values for the problems below.
+%\ReplaceMe{What parameters are there to choose in your evolutionary algorithm? Which fixed parameter values did you use for all experiments below? If some parameters are determined based on information from the problem instance (e.g., number of cities), also report their specific values for the problems below.
 
-Report the main characteristics of the computer system on which you ran your evolutionary algorithm. Include the processor or CPU (including the number of cores and clock speed), the amount of main memory, and the version of Python 3.}
+%Report the main characteristics of the computer system on which you ran your evolutionary algorithm. Include the processor or CPU (including the number of cores and clock speed), the amount of main memory, and the version of Python 3.}
 
 All experiments conducted in this section are done using the same parameter values. The parameters that have a fixed value can be found in Table \ref{table:experiments} and the dynamic parameters take the values specified in section \ref{sec:evolutionary algorithm}. The operators used are: roulette wheel selection, OX for recombination, RSM for mutation, parallel 3-opt for local search and duplicate individual removal as diversity promotion scheme. All problem instances were run for five minutes, but for the view of the graphs has been limited to 30 generations after the best objective value had been found.\\
 
@@ -250,13 +250,13 @@ Margin $\sigma$ in greedy diversification	&0.10	&Selection pressure decay	&0.999
 
 \subsection{tour29.csv}
 
-\ReplaceMe{Run your algorithm on this benchmark problem (with the 5 minute time limit from the Reporter). Include a typical convergence graph, by plotting the mean and best objective values in function of the time (for example based on the output of the Reporter class). 
+%\ReplaceMe{Run your algorithm on this benchmark problem (with the 5 minute time limit from the Reporter). Include a typical convergence graph, by plotting the mean and best objective values in function of the time (for example based on the output of the Reporter class). 
 
-What is the best tour length you found? What is the corresponding sequence of cities? 
+%What is the best tour length you found? What is the corresponding sequence of cities? 
 
-Interpret your results. How do you rate the performance of your algorithm (time, memory, speed of convergence, diversity of population, quality of the best solution, etc)? Is your solution close to the optimal one?
+%Interpret your results. How do you rate the performance of your algorithm (time, memory, speed of convergence, diversity of population, quality of the best solution, etc)? Is your solution close to the optimal one?
 
-Solve this problem 1000 times and record the results. Make a histogram of the final mean fitnesses and the final best fitnesses of the 1000 runs. Comment on this figure: is there a lot of variability in the results, what are the means and the standard deviations?}
+%Solve this problem 1000 times and record the results. Make a histogram of the final mean fitnesses and the final best fitnesses of the 1000 runs. Comment on this figure: is there a lot of variability in the results, what are the means and the standard deviations?}
 
 In Figure \ref{fig:graphs} the convergence graph of this problem can be found in the top left hand corner. Since the heuristic value is a good approximation for the optimal solution, it converges quickly. The restarting points are clearly visible in the mean objective values. Because of these large values a plot with only the convergence of the best objective value has been added in Figure \ref{fig:best}.\\
 The solution found is the global optimal solution for this instance. The corresponding sequence is:
@@ -273,41 +273,41 @@ The algorithm will generate a different solution each time it is executed due to
 
 \begin{figure}
 \centering
-\input{../histogram.pgf}
+\scalebox{1}{\input{../histogram.pgf}}
 \caption{Histogram of the mean and best objective values of 1000 runs of the \texttt{tour29} problem instance.}
 \label{fig:histogram}
 \end{figure}
 
 \subsection{tour100.csv}
 
-\ReplaceMe{Run your algorithm on this benchmark problem (with the 5 minute time limit from the Reporter). Include a typical convergence graph, by plotting the mean and best objective values in function of the time (for example based on the output of the Reporter class). 
-
-What is the best tour length you found in each case? 
-
-Interpret your results. How do you rate the performance of your algorithm (time, memory, speed of convergence, diversity of population, quality of the best solution, etc)? Is your solution close to the optimal one?}
+%\ReplaceMe{Run your algorithm on this benchmark problem (with the 5 minute time limit from the Reporter). Include a typical convergence graph, by plotting the mean and best objective values in function of the time (for example based on the output of the Reporter class). 
+%
+%What is the best tour length you found in each case? 
+%
+%Interpret your results. How do you rate the performance of your algorithm (time, memory, speed of convergence, diversity of population, quality of the best solution, etc)? Is your solution close to the optimal one?}
 
 Just like the convergence graph of \texttt{tour29}, the convergence graph of \texttt{tour100} can be found on Figure \ref{fig:graphs} and a clearer view of the best value on Figure \ref{fig:best}. Note that the mean objective value shows some incontinuities due to the disconnected cities. The algorithm does not explicitly take these disconnections into account, but rather treats it as a edge with an infinitely high distance. Therefore the recombination and mutation operators are able to create tours with an infinite length. This does not form a problem for the best solution since the elimination and selection schemes will filter these results out.\\
 The solution found is only 1\% longer than the optimal value specified in the project description and this optimal value is an estimation in itself. So it could well be that the solution found is even more optimal. The solution is also found well within the time limit (after around 30 seconds). 
 
 \subsection{tour194.csv}
 
-\ReplaceMe{Run your algorithm on this benchmark problem (with the 5 minute time limit from the Reporter). Include a typical convergence graph, by plotting the mean and best objective values in function of the time (for example based on the output of the Reporter class). 
-
-What is the best tour length you found? 
-
-Interpret your results. How do you rate the performance of your algorithm (time, memory, speed of convergence, diversity of population, quality of the best solution, etc)? Is your solution close to the optimal one?}
+%\ReplaceMe{Run your algorithm on this benchmark problem (with the 5 minute time limit from the Reporter). Include a typical convergence graph, by plotting the mean and best objective values in function of the time (for example based on the output of the Reporter class). 
+%
+%What is the best tour length you found? 
+%
+%Interpret your results. How do you rate the performance of your algorithm (time, memory, speed of convergence, diversity of population, quality of the best solution, etc)? Is your solution close to the optimal one?}
 
 Just like the convergence graph of \texttt{tour29}, the convergence graph of \texttt{tour194} can be found on Figure \ref{fig:graphs} and a clearer view of the best value on Figure \ref{fig:best}. The various restart points are clearly visible in the mean objective value. This time the algorithm ran for the full time span given, but the final solution was already found after approximately 100 seconds. The solution found here belongs in the top 20\% of all students on the leaderboard (at the time of writing). This shows that the solution found is a good solution for this problem.
 
 \subsection{tour929.csv}
 
-\ReplaceMe{Run your algorithm on this benchmark problem (with the 5 minute time limit from the Reporter). Include a typical convergence graph, by plotting the mean and best objective values in function of the time (for example based on the output of the Reporter class). 
-
-What is the best tour length you found? 
-
-Interpret your results. How do you rate the performance of your algorithm (time, memory, speed of convergence, diversity of population, quality of the best solution, etc)? Is your solution close to the optimal one? 
-
-Did your algorithm converge before the time limit? How many iterations did you perform?}
+%\ReplaceMe{Run your algorithm on this benchmark problem (with the 5 minute time limit from the Reporter). Include a typical convergence graph, by plotting the mean and best objective values in function of the time (for example based on the output of the Reporter class). 
+%
+%What is the best tour length you found? 
+%
+%Interpret your results. How do you rate the performance of your algorithm (time, memory, speed of convergence, diversity of population, quality of the best solution, etc)? Is your solution close to the optimal one? 
+%
+%Did your algorithm converge before the time limit? How many iterations did you perform?}
 
 Just like the convergence graph of \texttt{tour29}, the convergence graph of \texttt{tour929} can be found on Figure \ref{fig:graphs} and a clearer view of the best value on Figure \ref{fig:best}. The final best solution had a length of 102637.963, but the algorithm had not yet converged after five minutes and 135 generations. This solution is 7\% longer than the optimal value specified in the project description. But this is again an estimation, thus the difference can be smaller as well. The best value this algorithm was able to produce without a time limit was \ReplaceMe{x} in \ReplaceMe{y} generations.
 
@@ -327,9 +327,9 @@ Just like the convergence graph of \texttt{tour29}, the convergence graph of \te
 
 \section{Critical reflection}
 
-\RemoveMe{\textbf{Goal:} Based on this section, we will evaluate your understanding and insight into the main strengths and weaknesses of your evolutionary algorithms.}
+%\RemoveMe{\textbf{Goal:} Based on this section, we will evaluate your understanding and insight into the main strengths and weaknesses of your evolutionary algorithms.}
 
-\ReplaceMe{Describe the main lessons learned from this project. What do you think are the main strong points of evolutionary algorithms in general? Did you apply these strengths in this project? What are the main weaknesses of evolutionary algorithms and of your implementation in particular? Do you think these can be avoided or mitigated? How? Do you believe evolutionary algorithms are appropriate for this problem? Why (not)? What surprised you and why? What did you learn from this project?}
+%\ReplaceMe{Describe the main lessons learned from this project. What do you think are the main strong points of evolutionary algorithms in general? Did you apply these strengths in this project? What are the main weaknesses of evolutionary algorithms and of your implementation in particular? Do you think these can be avoided or mitigated? How? Do you believe evolutionary algorithms are appropriate for this problem? Why (not)? What surprised you and why? What did you learn from this project?}
 
 This project was very useful to get a better understanding of the workings of evolutionary algorithms. I knew that these algorithms existed and have seen them applied to games in different YouTube videos \cite{video1, video2}, but the fact that they can be applied to other problems as well was new to me. \\
 I think that one of the key strengths of evolutionary algorithms is the fact that the search space can be explored in a structured way instead of sampling the domain at random and hoping for a good solution. But this strength can be its downfall as well. If the algorithm gets finds a local optimum, it can get stuck in this optimum. This weakness is further increased by the use of local search operators. Luckily diversion promotion schemes exist that try to counteract these weaknesses.\\
@@ -337,10 +337,10 @@ All these operators are used in the algorithm described in this paper. The bigge
 Another weakness of evolutionary algorithms is the need for parameter tuning.  This surprised me, because most of the times the results of the parameters 'out-of-the-box' are significantly worse than the tuned parameters. I did not know there were so many parameters to choose. Self-adaptivity can help with this problem, but sometimes these schemes require starting parameters themselves. In this case the parameter selection took almost 30 times longer than the algorithm is allowed to run. It would almost be worth using a evolutionary algorithm to set the parameters of the evolutionary algorithm.\\
 I will definitely try out evolutionary algorithms on other problems in the future. The capabilities are almost endless with the different mutation, recombination and other operators. 
 
-\section{Other comments} \label{sec_other}
+%\section{Other comments} \label{sec_other}
 
-\ReplaceMe{In case you think there is something important to discuss that is not covered by the previous sections, you can do it here. }
-
+%\ReplaceMe{In case you think there is something important to discuss that is not covered by the previous sections, you can do it here. }
+\newpage
 \bibliographystyle{unsrt}
 \bibliography{mybib}
 
