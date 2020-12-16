@@ -1209,6 +1209,9 @@ class r0701014:
                                         ]
 
     def init_dictionary(self) -> None:
+        """
+        Initializes the dictionary used in the parallel execution of the 3-opt method.
+        """
         var_dict["distance_matrix"] = self.raw_distance_matrix
         var_dict["nearest_neighbors"] = self.raw_nearest_neighbors
         var_dict["tour_size"] = self.tour_size
@@ -1251,4 +1254,4 @@ class r0701014:
 #                  local])
 
 TSP = r0701014()
-TSP.optimize("tour929.csv")
+TSP.optimize("tour100.csv")
