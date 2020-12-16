@@ -21,19 +21,19 @@ class Reporter:
 	#
 	# Returns the time that is left in seconds as a floating-point number.
 	def report(self, meanObjective, bestObjective, bestSolution):
-		if (time.time() - self.startTime < self.allowedTime + self.writingTime):
-			start = time.time()
-			
-			outFile = open(self.filename, "a")
-			outFile.write(str(self.numIterations) + self.delimiter)
-			outFile.write(str(start - self.startTime - self.writingTime) + self.delimiter)
-			outFile.write(str(meanObjective) + self.delimiter)
-			outFile.write(str(bestObjective) + self.delimiter)
-			for i in range(bestSolution.size):
-				outFile.write(str(bestSolution[i]) + self.delimiter)
-			outFile.write('\n')
-			outFile.close()
+		# if (time.time() - self.startTime < self.allowedTime + self.writingTime):
+		start = time.time()
 
-			self.numIterations += 1
-			self.writingTime += time.time() - start
+		outFile = open(self.filename, "a")
+		outFile.write(str(self.numIterations) + self.delimiter)
+		outFile.write(str(start - self.startTime - self.writingTime) + self.delimiter)
+		outFile.write(str(meanObjective) + self.delimiter)
+		outFile.write(str(bestObjective) + self.delimiter)
+		for i in range(bestSolution.size):
+			outFile.write(str(bestSolution[i]) + self.delimiter)
+		outFile.write('\n')
+		outFile.close()
+
+		self.numIterations += 1
+		self.writingTime += time.time() - start
 		return (self.allowedTime + self.writingTime) - (time.time() - self.startTime)

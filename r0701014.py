@@ -285,7 +285,9 @@ class r0701014:
             population, scores = self.eliminate_duplicate_individuals(population, scores)
             population, scores = self.elitism(population, scores)
 
-            if self.same_best_objective % 30 == 0 and self.same_best_objective != 0:
+            if self.same_best_objective % 15 == 0 and self.same_best_objective != 0:
+                if self.same_best_objective >= 40:
+                    break
                 self.selection_pressure = 0.8
                 population = self.random_nearest_insertion()
                 population[0] = self.best_solution
@@ -300,8 +302,8 @@ class r0701014:
                 self.mean_objective, self.best_objective, self.best_solution
             )
             self.time_left = time_left
-            if time_left < 0:
-                break
+            # if time_left < 0:
+            #     break
 
         return 0
 
@@ -1249,4 +1251,4 @@ class r0701014:
 #                  local])
 
 TSP = r0701014()
-TSP.optimize("tour29.csv")
+TSP.optimize("tour929.csv")
