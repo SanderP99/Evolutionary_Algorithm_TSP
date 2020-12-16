@@ -275,7 +275,7 @@ class r0701014:
 
         population = self.initialize_population()
 
-        while not self.is_converged():
+        while True:
             offspring = self.recombination(population)
             mutated_population = self.mutation(population, offspring)
 
@@ -286,8 +286,8 @@ class r0701014:
             population, scores = self.elitism(population, scores)
 
             if self.same_best_objective % 15 == 0 and self.same_best_objective != 0:
-                if self.same_best_objective >= 40:
-                    break
+                # if self.same_best_objective >= 40:
+                #     break
                 self.selection_pressure = 0.8
                 population = self.random_nearest_insertion()
                 population[0] = self.best_solution
@@ -302,8 +302,8 @@ class r0701014:
                 self.mean_objective, self.best_objective, self.best_solution
             )
             self.time_left = time_left
-            # if time_left < 0:
-            #     break
+            if time_left < 0:
+                break
 
         return 0
 
@@ -1192,7 +1192,7 @@ class r0701014:
                 candidates.append(x)
         return np.array(candidates)
 
-    def build_nearest_neighbor_list(self):
+    def build_nearest_neighbor_list(self) -> None:
         """
         This function creates the list of the nearest neighbors for all nodes in the tour. This list is then used in
         the optimized 3 opt local search operator.
@@ -1216,42 +1216,3 @@ class r0701014:
         var_dict["nearest_neighbors"] = self.raw_nearest_neighbors
         var_dict["tour_size"] = self.tour_size
         var_dict["individuals_size"] = self.population_size + self.offspring_size
-
-
-# with open('1000Runs.csv', 'w', newline='') as file:
-#     writer = csv.writer(file, delimiter=',')
-#     writer.writerow(['Generations', 'Time', 'Mean', 'Best'])
-
-
-# for _ in range(100):
-#     TSP = r0701014()
-#     TSP.optimize('tour29.csv')
-#     with open('1000Runs.csv', 'a', newline='') as file:
-#         writer = csv.writer(file, delimiter=',')
-#         writer.writerow([TSP.generation, 300 - TSP.time_left, TSP.mean_objective, TSP.best_objective])
-
-# for _ in range(3):
-#     TSP = r0701014()
-#     population_sizes = [16, 25, 32]
-#     offspring_sizes = [40, 50, 60]
-#     local_search = [0.5]
-#     all_combinations = itertools.product(population_sizes, offspring_sizes, local_search)
-#     print(all_combinations)
-#     for pop_size, offspring_size, local in all_combinations:
-#         TSP.__init__()
-#         TSP.population_size = pop_size
-#         TSP.offspring_size = offspring_size
-#         if local == 1:
-#             TSP.local_search_on_all = True
-#         else:
-#             TSP.percentage_local_search = local
-#         TSP.optimize('tour194.csv')
-#
-#         with open('testHP194.csv', 'a') as file:
-#             writer = csv.writer(file, delimiter=',')
-#             writer.writerow(
-#                 [TSP.generation, TSP.time_left, TSP.mean_objective, TSP.best_objective, pop_size, offspring_size,
-#                  local])
-
-TSP = r0701014()
-TSP.optimize("tour100.csv")
