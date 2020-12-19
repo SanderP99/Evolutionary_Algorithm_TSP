@@ -286,8 +286,6 @@ class r0701014:
             population, scores = self.elitism(population, scores)
 
             if self.same_best_objective % 15 == 0 and self.same_best_objective != 0:
-                # if self.same_best_objective >= 40:
-                #     break
                 self.selection_pressure = 0.8
                 population = self.random_nearest_insertion()
                 population[0] = self.best_solution
